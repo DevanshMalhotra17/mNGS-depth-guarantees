@@ -10,7 +10,12 @@
 
 We derive the first closed-form lower bound on sequencing depth that provably guarantees detection of a divergent pathogen in clinical metagenomic next-generation sequencing (mNGS), jointly as a function of pathogen relative abundance $p$, per-base genomic divergence $\mu$, classifier $w$-mer window length $w$, read length $L$, target false-negative probability $\delta$, and reference database size $Q$. Central to our analysis is the function $q(w, L, \mu)$ — the exact probability that a single read from a divergent pathogen produces at least one classifiable $w$-mer — derived via a linear recurrence on the longest-run distribution of Bernoulli trials. Our depth bound extends the Bernoulli limit-of-detection model of Eidenschink Brodersen et al. [1] by introducing the divergence dimension absent from their framework. We further derive the critical divergence $\mu_c$: the hard boundary beyond which no reference-based $w$-mer classifier can guarantee detection within any fixed sequencing budget. Finally, we prove that the optimal classifier window $w^{\ast}$ minimizing required depth subject to a false-positive rate constraint lies at the boundary of the false-positive feasibility region, with the cost of over-specification diverging as divergence approaches $\mu_c$. Results are validated empirically on real SARS-CoV-2 (Wuhan, Omicron), Influenza H3N2 HA, and H1N1 HA genomes.
 
+> 📖 New to k-mer classification, divergence, or the math notation here?
+> See [EXPLAINER.md](EXPLAINER.md) for a full plain-language walkthrough
+> of every term, equation, and proof step.
+
 ---
+
 
 ## Repository Structure
 
