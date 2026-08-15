@@ -93,7 +93,7 @@ A read of length $L$ is **informative** if it contains at least one $w$-mer that
 
 Under the independent-substitution model (each base matches reference with probability $1-\mu$), define:
 
-$$q(w, L, \mu) = 1 - P_L(w,\, 1-\mu)$$
+$$q(w, L, \mu) = 1 - P_L(w, 1-\mu)$$
 
 where $P_n = P_n(w, 1-\mu)$ is the probability that $n$ independent Bernoulli $(1-\mu)$ trials contain **no run of $w$ consecutive successes**, satisfying the linear recurrence:
 
@@ -163,11 +163,11 @@ For $\mu > \mu_c$, no reference-based $w$-mer classifier achieves $\delta$-detec
 The closed-form approximation using (2):
 
 $$
-\mu_c \approx 1 - \left(\frac{-\ln\bigl(1 - \frac{\ln(1/\delta)}{p \, T_{\max}}\bigr)}{L - w + 1}\right)^{1/w}
+\mu_c \approx 1 - \left(\frac{-\ln\bigl(1 - \frac{\ln(1/\delta)}{p \cdot T_{\max}}\bigr)}{L - w + 1}\right)^{1/w}
 $$
 
 **Proof.**
-By Theorem 1, $T^{\ast} \leq T_{\max}$ iff $q(w,L,\mu) \geq \ln(1/\delta)/(p\,T_{\max})$. The function $q(w,L,\cdot)$ is continuous and strictly decreasing in $\mu$ (by the Corollary), with $q(w,L,0) > 0$ and $q(w,L,1) = 0$. The intermediate value theorem guarantees a unique $\mu_c$ satisfying (4). For $\mu > \mu_c$, we have $q < \ln(1/\delta)/(p\,T_{\max})$, so $T^{\ast} > T_{\max}$.
+By Theorem 1, $T^{\ast} \leq T_{\max}$ iff $q(w,L,\mu) \geq \ln(1/\delta)/(p\cdot T_{\max})$. The function $q(w,L,\cdot)$ is continuous and strictly decreasing in $\mu$ (by the Corollary), with $q(w,L,0) > 0$ and $q(w,L,1) = 0$. The intermediate value theorem guarantees a unique $\mu_c$ satisfying (4). For $\mu > \mu_c$, we have $q < \ln(1/\delta)/(p\cdot T_{\max})$, so $T^{\ast} > T_{\max}$.
 
 **Remark.** $\mu_c$ is not a fixed biological constant — it depends on all detection parameters. Increasing read length $L$ raises $\mu_c$ for all other fixed parameters: a formal justification for the practical preference for long-read platforms in novel-pathogen detection.
 
@@ -204,7 +204,7 @@ For the divergence claim: at $w = w^{\ast} + \Delta$ with $\Delta \geq 1$:
 
 $$\frac{T^{\ast}(w^{\ast}+\Delta)}{T^{\ast}(w^{\ast})} = \frac{q(w^{\ast}, L, \mu)}{q(w^{\ast}+\Delta, L, \mu)} \xrightarrow{\mu \to \mu_c} \infty$$
 
-since $q(w^{\ast}, L, \mu_c) = \ln(1/\delta)/(p\,T_{\max}) > 0$ while $q(w^{\ast}+\Delta, L, \mu_c) \to 0$ strictly faster by strict monotonicity in $w$.
+since $q(w^{\ast}, L, \mu_c) = \ln(1/\delta)/(p\cdot T_{\max}) > 0$ while $q(w^{\ast}+\Delta, L, \mu_c) \to 0$ strictly faster by strict monotonicity in $w$.
 
 **Remark (Tradeoff sharpening under divergence).** At $\mu = 0$, $q(w,L,0) \approx 1$ for $w \ll L$, so $T^{\ast}$ is nearly independent of $w$ and any $w \geq w^{\ast}$ is acceptable. For $\mu > 0$, the penalty for choosing $w > w^{\ast}$ is largest precisely when divergence is highest — when correct window choice matters most.
 
