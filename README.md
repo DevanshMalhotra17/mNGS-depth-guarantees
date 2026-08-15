@@ -72,7 +72,7 @@ Three sub-questions:
 
 ### Setting
 
-A clinical mNGS experiment sequences $T$ reads from a patient sample. A pathogen $\mathcal{P}$ is present at relative abundance $p \in (0,1)$, meaning fraction $p$ of reads originate from $\mathcal{P}$. The reference database $\mathcal{D}$ contains $Q$ sequences of average length $n_{\text{avg}}$ bp; the nearest reference diverges from the true pathogen genome at per-base rate $\mu$ under an independent substitution model. $w$-mer classification follows the lowest-common-ancestor approach of Kraken2 [2].
+A clinical mNGS experiment sequences $T$ reads from a patient sample. A pathogen $\mathcal{P}$ is present at relative abundance $p \in (0,1)$, meaning fraction $p$ of reads originate from $\mathcal{P}$. The reference database $\mathcal{D}$ contains $Q$ sequences of average length $n_{\mathrm{avg}}$ bp; the nearest reference diverges from the true pathogen genome at per-base rate $\mu$ under an independent substitution model. $w$-mer classification follows the lowest-common-ancestor approach of Kraken2 [2].
 
 ### Definition 1.1 — Divergence Tier
 
@@ -92,15 +92,19 @@ Under the independent-substitution model (each base matches reference with proba
 
 $$q(w, L, \mu) = 1 - P_L(w,\, 1-\mu)$$
 
-where $P_n = P_n(w, 1-\mu)$ is the probability that $n$ independent Bernoulli$(1{-}\mu)$ trials contain **no run of $w$ consecutive successes**, satisfying the linear recurrence:
+where $P_n = P_n(w, 1-\mu)$ is the probability that $n$ independent Bernoulli $(1-\mu)$ trials contain **no run of $w$ consecutive successes**, satisfying the linear recurrence:
 
-$$P_n = \sum_{j=0}^{\min(n,\,w)-1} (1-\mu)^j \cdot \mu \cdot P_{n-j-1}, \qquad n \geq 1, \quad P_0 = 1 \tag{1}$$
+$$
+P_n = \sum_{j=0}^{\min(n,w)-1} (1-\mu)^j \cdot \mu \cdot P_{n-j-1}, \qquad n \geq 1, \quad P_0 = 1
+$$
 
 The **Poisson approximation** — valid only when $(L-w+1)(1-\mu)^w \ll 1$ (cf. [3] for related k-mer frequency approximations):
 
-$$q(w, L, \mu) \approx 1 - \exp\!\bigl(-(L-w+1)(1-\mu)^{w}\bigr) \tag{2}$$
+$$
+q(w, L, \mu) \approx 1 - \exp\bigl(-(L-w+1)(1-\mu)^{w}\bigr)
+$$
 
-> **Important:** The Poisson approximation overestimates $q$ by up to **70%** in the low-$\mu$ regime (see Figure 1). The exact recurrence is required.
+> **Important:** The Poisson approximation overestimates $q$ by up to **70%** when $\mu$ is small (see Figure 1). The exact recurrence is required.
 
 ### Definition 1.3 — Detection Event
 
@@ -114,9 +118,11 @@ Given $T$ reads, the false-negative event $\overline{\mathcal{E}}$ occurs if no 
 
 **Statement.** The minimum sequencing depth guaranteeing $\delta$-detection is:
 
-$$T^{\ast}(p, \mu, w, L, \delta) = \left\lceil \frac{\ln(1/\delta)}{-\ln\!\bigl(1 - p \cdot q(w,L,\mu)\bigr)} \right\rceil \;\geq\; \left\lceil \frac{\ln(1/\delta)}{p \cdot q(w,L,\mu)} \right\rceil \tag{3}$$
+$$
+T^{\ast}(p, \mu, w, L, \delta) = \left\lceil \frac{\ln(1/\delta)}{-\ln\bigl(1 - p \cdot q(w,L,\mu)\bigr)} \right\rceil \geq \left\lceil \frac{\ln(1/\delta)}{p \cdot q(w,L,\mu)} \right\rceil
+$$
 
-The right-hand inequality is the small-$pq$ approximation, tight within a factor of 2 whenever $pq \leq 0.5$.
+The right-hand inequality is the approximation for small $pq$, tight within a factor of 2 whenever $pq \leq 0.5$.
 
 **Proof.**
 Each read is independently a pathogen read with probability $p$, and each pathogen read is independently informative with probability $q = q(w,L,\mu)$. Therefore each read is an informative pathogen read with probability $pq$, independently across reads.
@@ -129,11 +135,11 @@ Setting $\Pr(\overline{\mathcal{E}}) \leq \delta$ and solving for $T$:
 
 $$(1-pq)^T \leq \delta \iff T \ln(1-pq) \leq \ln\delta \iff T \geq \frac{\ln(1/\delta)}{-\ln(1-pq)}$$
 
-Taking the ceiling gives the exact integer minimum. The inequality $-\ln(1-x) \geq x$ (equality only at $x=0$) gives $-\ln(1-pq) \geq pq$, establishing the right-hand approximation. The factor-of-2 bound follows from $-\ln(1-x) \leq 2x$ for $x \leq 1/2$. $\blacksquare$
+Taking the ceiling gives the exact integer minimum. The inequality $-\ln(1-x) \geq x$ (equality only at $x=0$) gives $-\ln(1-pq) \geq pq$, establishing the right-hand approximation. The factor-of-2 bound follows from $-\ln(1-x) \leq 2x$ for $x \leq 1/2$.
 
 **Corollary (Monotonicity).** $T^{\ast}$ is strictly increasing in $\mu$ and strictly increasing in $w$, for all $\mu \in (0,1)$, $w \geq 1$, $L > w$.
 
-*Proof.* $q(w,L,\mu) = 1 - P_L(w,1-\mu)$ is strictly decreasing in $\mu$ (larger divergence makes each base more likely to mismatch, reducing the probability of a run of $w$ consecutive matches) and strictly decreasing in $w$ (a longer run is harder to achieve for any $\mu > 0$). Since $T^{\ast}$ is strictly decreasing in $q > 0$, strict monotonicity in both $\mu$ and $w$ follows. $\blacksquare$
+*Proof.* $q(w,L,\mu) = 1 - P_L(w,1-\mu)$ is strictly decreasing in $\mu$ (larger divergence makes each base more likely to mismatch, reducing the probability of a run of $w$ consecutive matches) and strictly decreasing in $w$ (a longer run is harder to achieve for any $\mu > 0$). Since $T^{\ast}$ is strictly decreasing in $q > 0$, strict monotonicity in both $\mu$ and $w$ follows.
 
 ---
 
@@ -145,16 +151,20 @@ $$\mu_c(w, L, p, \delta, T_{\max}) = \sup\bigl\lbrace \mu \in [0,1] : T^{\ast}(p
 
 $\mu_c$ is the unique solution to:
 
-$$p \cdot q(w, L, \mu_c) = \frac{\ln(1/\delta)}{T_{\max}} \tag{4}$$
+$$
+p \cdot q(w, L, \mu_c) = \frac{\ln(1/\delta)}{T_{\max}}
+$$
 
 For $\mu > \mu_c$, no reference-based $w$-mer classifier achieves $\delta$-detection within $T_{\max}$ reads (Tier 3).
 
 The closed-form approximation using (2):
 
-$$\mu_c \approx 1 - \left(\frac{-\ln\!\bigl(1 - \frac{\ln(1/\delta)}{p \, T_{\max}}\bigr)}{L - w + 1}\right)^{1/w}$$
+$$
+\mu_c \approx 1 - \left(\frac{-\ln\bigl(1 - \frac{\ln(1/\delta)}{p \, T_{\max}}\bigr)}{L - w + 1}\right)^{1/w}
+$$
 
 **Proof.**
-By Theorem 1, $T^{\ast} \leq T_{\max}$ iff $q(w,L,\mu) \geq \ln(1/\delta)/(p\,T_{\max})$. The function $q(w,L,\cdot)$ is continuous and strictly decreasing in $\mu$ (by the Corollary), with $q(w,L,0) > 0$ and $q(w,L,1) = 0$. The intermediate value theorem guarantees a unique $\mu_c$ satisfying (4). For $\mu > \mu_c$, we have $q < \ln(1/\delta)/(p\,T_{\max})$, so $T^{\ast} > T_{\max}$. $\blacksquare$
+By Theorem 1, $T^{\ast} \leq T_{\max}$ iff $q(w,L,\mu) \geq \ln(1/\delta)/(p\,T_{\max})$. The function $q(w,L,\cdot)$ is continuous and strictly decreasing in $\mu$ (by the Corollary), with $q(w,L,0) > 0$ and $q(w,L,1) = 0$. The intermediate value theorem guarantees a unique $\mu_c$ satisfying (4). For $\mu > \mu_c$, we have $q < \ln(1/\delta)/(p\,T_{\max})$, so $T^{\ast} > T_{\max}$.
 
 **Remark.** $\mu_c$ is not a fixed biological constant — it depends on all detection parameters. Increasing read length $L$ raises $\mu_c$ for all other fixed parameters: a formal justification for the practical preference for long-read platforms in novel-pathogen detection.
 
@@ -164,28 +174,34 @@ By Theorem 1, $T^{\ast} \leq T_{\max}$ iff $q(w,L,\mu) \geq \ln(1/\delta)/(p\,T_
 
 **Statement.** Let $\alpha \in (0,1)$ be a target false-positive rate. The false-positive probability for a single $w$-mer query against the database is:
 
-$$P_{\text{FP}}(w) \approx \frac{Q \cdot n_{\text{avg}}}{4^w} \tag{5}$$
+$$
+P_{\mathrm{FP}}(w) \approx \frac{Q \cdot n_{\mathrm{avg}}}{4^w}
+$$
 
-The optimal window length minimizing $T^{\ast}$ subject to $P_{\text{FP}}(w) \leq \alpha$ is:
+The optimal window length minimizing $T^{\ast}$ subject to $P_{\mathrm{FP}}(w) \leq \alpha$ is:
 
-$$w^{\ast} = \left\lceil \log_4\!\left(\frac{Q \cdot n_{\text{avg}}}{\alpha}\right) \right\rceil \tag{6}$$
+$$
+w^{\ast} = \left\lceil \log_4\left(\frac{Q \cdot n_{\mathrm{avg}}}{\alpha}\right) \right\rceil
+$$
 
 For $\mu > 0$, using any $w > w^{\ast}$ strictly increases required sequencing depth, with the cost of over-specification diverging as $\mu \to \mu_c$.
 
 **Proof.**
-By the Corollary to Theorem 1, $T^{\ast}(w)$ is strictly increasing in $w$. Therefore the minimum over the feasible set $\mathcal{W} = \lbrace w \in \mathbb{Z}^+ : P_{\text{FP}}(w) \leq \alpha \rbrace$ is attained at $w^{\dagger} = \min \mathcal{W}$.
+By the Corollary to Theorem 1, $T^{\ast}(w)$ is strictly increasing in $w$. Therefore the minimum over the feasible set $\mathcal{W} = \lbrace w \in \mathbb{Z}^+ : P_{\mathrm{FP}}(w) \leq \alpha \rbrace$ is attained at $w^{\dagger} = \min \mathcal{W}$.
 
-The constraint $P_{\text{FP}}(w) \leq \alpha$ with (5) becomes:
+The constraint $P_{\mathrm{FP}}(w) \leq \alpha$ with (5) becomes:
 
-$$\frac{Q \cdot n_{\text{avg}}}{4^w} \leq \alpha \iff 4^w \geq \frac{Q \cdot n_{\text{avg}}}{\alpha} \iff w \geq \log_4\!\left(\frac{Q \cdot n_{\text{avg}}}{\alpha}\right)$$
+$$
+\frac{Q \cdot n_{\mathrm{avg}}}{4^w} \leq \alpha \iff 4^w \geq \frac{Q \cdot n_{\mathrm{avg}}}{\alpha} \iff w \geq \log_4\left(\frac{Q \cdot n_{\mathrm{avg}}}{\alpha}\right)
+$$
 
-The smallest integer satisfying this is $w^{\dagger} = \lceil \log_4(Q \cdot n_{\text{avg}} / \alpha) \rceil = w^{\ast}$.
+The smallest integer satisfying this is $w^{\dagger} = \lceil \log_4(Q \cdot n_{\mathrm{avg}} / \alpha) \rceil = w^{\ast}$.
 
 For the divergence claim: at $w = w^{\ast} + \Delta$ with $\Delta \geq 1$:
 
 $$\frac{T^{\ast}(w^{\ast}+\Delta)}{T^{\ast}(w^{\ast})} = \frac{q(w^{\ast}, L, \mu)}{q(w^{\ast}+\Delta, L, \mu)} \xrightarrow{\mu \to \mu_c} \infty$$
 
-since $q(w^{\ast}, L, \mu_c) = \ln(1/\delta)/(p\,T_{\max}) > 0$ while $q(w^{\ast}+\Delta, L, \mu_c) \to 0$ strictly faster by strict monotonicity in $w$. $\blacksquare$
+since $q(w^{\ast}, L, \mu_c) = \ln(1/\delta)/(p\,T_{\max}) > 0$ while $q(w^{\ast}+\Delta, L, \mu_c) \to 0$ strictly faster by strict monotonicity in $w$.
 
 **Remark (Tradeoff sharpening under divergence).** At $\mu = 0$, $q(w,L,0) \approx 1$ for $w \ll L$, so $T^{\ast}$ is nearly independent of $w$ and any $w \geq w^{\ast}$ is acceptable. For $\mu > 0$, the penalty for choosing $w > w^{\ast}$ is largest precisely when divergence is highest — when correct window choice matters most.
 
@@ -208,9 +224,11 @@ This is equivalent to the classical "run probability" problem in combinatorics �
 
 ## Numerical Calibration
 
-With $Q = 5{,}000$, $n_{\text{avg}} = 15{,}000$ bp, $\alpha = 10^{-6}$:
+With $Q = 5{,}000$, $n_{\mathrm{avg}} = 15{,}000$ bp, $\alpha = 10^{-6}$:
 
-$$w^{\ast} = \left\lceil \log_4\!\left(\frac{5000 \times 15000}{10^{-6}}\right) \right\rceil = \left\lceil \log_4(7.5 \times 10^{13}) \right\rceil = \lceil 23.1 \rceil = 24$$
+$$
+w^{\ast} = \left\lceil \log_4\left(\frac{5000 \times 15000}{10^{-6}}\right) \right\rceil = \left\lceil \log_4(7.5 \times 10^{13}) \right\rceil = \lceil 23.1 \rceil = 24
+$$
 
 At $p = 10^{-4}$, $w = 24$, $L = 150$, $\delta = 0.01$, $T_{\max} = 100{,}000$: $\mu_c = 0.1349$
 
@@ -228,7 +246,7 @@ At $p = 10^{-4}$, $w = 24$, $L = 150$, $\delta = 0.01$, $T_{\max} = 100{,}000$: 
 
 Reference genomes were retrieved from Nextstrain [5] and NCBI. Divergence values for SARS-CoV-2 variants are based on published SNP counts [6,7]; influenza inter-season drift estimates follow Bedford et al. [8].
 
-| Scenario | Accession | $N$ (bp) | $\mu$ | $q_{\text{exact}}$ | Det. theory | Det. empirical | $\|\Delta\|$ |
+| Scenario | Accession | $N$ (bp) | $\mu$ | $q_{\mathrm{exact}}$ | Det. theory | Det. empirical | $\|\Delta\|$ |
 |---|---|---|---|---|---|---|---|
 | SARS-CoV-2 Wuhan → Wuhan | MN908947 [6] | 29,903 | 0.0000 | 1.00000 | 1.0000 | 1.0000 | 0.000 |
 | SARS-CoV-2 Wuhan → Omicron BA.1 | OX049951 [7] | 29,903 | 0.0017 | 1.00000 | 1.0000 | 1.0000 | 0.000 |
@@ -269,7 +287,7 @@ Heatmap of $\log_{10} T^{\ast}(p, \mu)$ over the biologically relevant parameter
 1. $T^{\ast}(p, \mu, w, L, \delta)$ — first closed-form depth bound incorporating divergence
 2. $\mu_c$ — first quantitative definition of the Tier 2 / Tier 3 boundary
 3. $w^{\ast} = 24$ proved, not just empirical — first formal derivation of the optimal window
-4. Poisson approximation failure — overestimates $q$ by up to 70% in the low-$\mu$ regime; exact recurrence is necessary
+4. Poisson approximation failure — overestimates $q$ by up to 70% when $\mu$ is small; exact recurrence is necessary
 
 ---
 
@@ -289,7 +307,7 @@ Heatmap of $\log_{10} T^{\ast}(p, \mu)$ over the biologically relevant parameter
 
 - **Independent substitution model:** Real divergence includes insertions, deletions, and recombination.
 - **Uniform read sampling:** GC bias and amplification artifacts cause non-uniform coverage.
-- **Sequencing errors:** Can be incorporated by replacing $\mu$ with $\mu_{\text{eff}} = \mu + e - \mu e$ where $e$ is per-base error rate.
+- **Sequencing errors:** Can be incorporated by replacing $\mu$ with $\mu_{\mathrm{eff}} = \mu + e - \mu e$ where $e$ is per-base error rate.
 - **Tier 3 scope:** Reference-free detection of truly novel pathogens ($\mu > \mu_c$) is explicitly out of scope.
 
 ---
