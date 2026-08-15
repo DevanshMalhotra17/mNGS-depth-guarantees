@@ -30,14 +30,12 @@ We derive the first closed-form lower bound on sequencing depth that provably gu
 │   ├── fig1.png              # Detection rate vs divergence
 │   ├── fig2.png              # Optimal w* and over-specification cost
 │   └── fig3.png              # Phase diagram (p, mu) → T*
-├── data/
-│   ├── sars_cov2_wuhan.fasta # Reference genome (MN908947, 29,903 bp)
-│   ├── h3n2_ha.fasta         # Influenza H3N2 HA (CY163680.1, 1,737 bp)
-│   ├── h1n1_ha.fasta         # Influenza H1N1 HA (CY121680.1, 1,752 bp)
-│   ├── results.csv           # Synthetic genome sweep results
-│   └── results_real_genomes.csv  # Real genome validation results
-└── slides/
-    └── competition_deck.pptx # 15-slide competition presentation
+└── data/
+    ├── sars_cov2_wuhan.fasta # Reference genome (MN908947, 29,903 bp)
+    ├── h3n2_ha.fasta         # Influenza H3N2 HA (CY163680.1, 1,737 bp)
+    ├── h1n1_ha.fasta         # Influenza H1N1 HA (CY121680.1, 1,752 bp)
+    ├── results.csv           # Synthetic genome sweep results
+    └── results_real_genomes.csv  # Real genome validation results
 ```
 
 ---
