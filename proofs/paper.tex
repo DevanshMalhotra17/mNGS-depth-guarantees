@@ -35,7 +35,7 @@
        Reference-Based Detection of Divergent Pathogens\\
        in Clinical Metagenomic Sequencing}
 \author{Devansh Malhotra}
-\date{October 21, 2026}
+\date{August 31, 2026}
 
 \begin{document}
 \maketitle
@@ -415,9 +415,13 @@ with $P_0=1$ and truncating the sum at $\min(n-1,w-1)$ --- a natural-looking
 alternative --- omits the all-successes case for $n<w$ and yields
 $P_1=\mu$ rather than $P_1=1$. The resulting error propagates: at $w=24$,
 $L=150$ it gives $q=0.949$ at $\mu=0.12$ and $q=0.824$ at $\mu=0.20$,
-against the correct values $0.580$ and $0.119$ (Table~1), which would make
-the Poisson approximation of \eqref{eq:poisson} appear conservative rather
-than optimistic.
+against the correct values $0.580$ and $0.119$ (Table~1). Omitting the
+all-successes case makes every $P_n$ too small, so the truncated form
+overestimates $q$ at every $\mu\in(0,1)$ and therefore always
+\emph{under}estimates $T^{*}$: the error fails dangerously rather than
+safely. At $\mu=0.20$ it also inverts the comparison with
+\eqref{eq:poisson}, whose value $0.451$ would appear conservative against
+the spurious $0.824$.
 \end{remark}
 
 \begin{definition}[Detection event]\label{def:detection}

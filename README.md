@@ -116,7 +116,7 @@ $$
 P_n = \sum_{j=0}^{w-1} (1-\mu)^j \cdot \mu \cdot P_{n-j-1}, \qquad n \geq w
 $$
 
-> **The boundary condition is not optional.** Replacing it with $P_0 = 1$ alone and truncating the sum at $\min(n-1, w-1)$ — a natural-looking alternative — gives $P_1 = \mu$ instead of $P_1 = 1$ and corrupts every subsequent value: at $\mu = 0.05$ it returns $q = 0.949$ instead of $0.986$, and at $\mu = 0.10$ it returns $0.824$ instead of $0.744$. See paper Remark 2.5.
+> **The boundary condition is not optional.** Replacing it with $P_0 = 1$ alone and truncating the sum at $\min(n-1, w-1)$ — a natural-looking alternative — gives $P_1 = \mu$ instead of $P_1 = 1$ and corrupts every subsequent value: at $\mu = 0.12$ it returns $q = 0.949$ instead of $0.580$, and at $\mu = 0.20$ it returns $0.824$ instead of $0.119$. Dropping the all-successes case makes every $P_n$ too small, so the truncated form overestimates $q$ at every $\mu \in (0,1)$ and therefore always *under*estimates $T^{\ast}$ — it fails dangerously, not safely. See paper Remark 2.5.
 
 The **Poisson approximation** — which treats the $L-w+1$ windows as independent (cf. [3] for related k-mer frequency approximations) and is used here only for comparison:
 
