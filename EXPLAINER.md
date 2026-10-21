@@ -30,7 +30,7 @@ Imagine a patient arrives in a hospital emergency room with a severe infection. 
 
 The traditional approach is to take a sample (blood, spinal fluid, etc.), grow it in a lab culture, and wait 24-72 hours for results. For critically ill patients, this is often too slow.
 
-**Metagenomic next-generation sequencing (mNGS)** is a modern alternative: instead of growing anything, you sequence all the DNA in the sample directly (pathogen and human DNA together) and use a computer to figure out which pathogen is present. This can be done in under 6 hours.
+**Metagenomic next-generation sequencing (mNGS)** is a modern alternative: instead of growing anything, you sequence all the DNA in the sample directly (pathogen and human DNA together) and use a computer to figure out which pathogen is present. On long-read platforms this has been done in about 6 hours, start to finish.
 
 But there's a catch: the computer works by comparing the sequenced DNA to a **reference database** of known pathogens. If the pathogen has **mutated significantly** from anything in the database or if it's a truly novel organism, the computer might miss it entirely.
 

@@ -116,8 +116,9 @@ Metagenomic next-generation sequencing (mNGS) offers a fundamentally
 different approach. Rather than culturing the organism, mNGS sequences all
 DNA molecules in a patient sample simultaneously --- human, bacterial,
 viral, and fungal --- and computationally separates them by comparison to a
-reference database. This process can be completed in under six
-hours~\cite{wilson2019}. Clinical studies have demonstrated mNGS's ability
+reference database. On long-read platforms the whole workflow, from sample
+to species call, has been completed in about six
+hours~\cite{charalampous2019}. Clinical studies have demonstrated mNGS's ability
 to detect pathogens missed by conventional testing, particularly in
 immunocompromised patients and in cases of neurological infection where
 standard cultures have low sensitivity~\cite{wilson2019}. The technology is
@@ -805,9 +806,12 @@ $\mu=0.20$). Reproduce with \texttt{python code/real\_genomes.py} (seed 42).}
 
 The results in Table~3 demonstrate that the theoretical bound is accurate
 across a range spanning two orders of magnitude in $\mu$ ($0.0017$ to $0.3$)
-and two distinct pathogen families. Every Tier 2 scenario achieves an
-empirical detection rate within one standard error of the theoretical
-prediction. The two Tier 3 scenarios (SARS-CoV-2 to SARS-CoV-1; H3N2 to H1N1
+and two distinct pathogen families. Every Tier 2 scenario agrees with the
+theoretical prediction to within $5\times10^{-4}$ in absolute detection
+rate; in the one such row whose empirical rate is not exactly $1$ (H3N2 HA,
+one-year drift) the gap is within one standard error, and in the other two
+the empirical rate saturates at $1$, slightly above theory, so the Monte
+Carlo standard error is identically zero. The two Tier 3 scenarios (SARS-CoV-2 to SARS-CoV-1; H3N2 to H1N1
 cross-subtype) show detection rates well below unity at $T=100{,}000$,
 consistent with the bound prediction $D_{\mathrm{theory}}<1-\delta$.
 
@@ -886,8 +890,8 @@ $\mu_c=0.1349$ --- meaning the approximation is least reliable exactly where
 the detection guarantee is most marginal and most consequential to get
 right.
 
-The overestimate is negligible at small divergence (ratio at most $1.01$ for
-$\mu\le0.05$) and grows with $\mu$: $1.34$ at $\mu=0.10$, $1.72$ at $0.12$,
+The overestimate is negligible at small divergence (ratio at most $1.015$
+for $\mu\le0.05$) and grows with $\mu$: $1.34$ at $\mu=0.10$, $1.72$ at $0.12$,
 and $3.8$ at $0.20$. It does not require $\lambda$ to be large; at
 $\mu=0.30$, $\lambda\approx0.024$ yet the ratio is still $3.2$. The cause is
 clumping, as described in Section~4.3: the Poisson count treats every
@@ -1015,6 +1019,9 @@ results are publicly available at
 under the GNU Affero General Public License v3.0.
 
 \begin{thebibliography}{99}
+% Two entries carry long unbreakable URLs; justifying around them leaves
+% badly underfull lines. Ragged-right is the usual remedy in bibliographies.
+\raggedright
 
 \bibitem{who2024} World Health Organization.
 Guidelines on the clinical management of sepsis. 2024. URL
@@ -1027,6 +1034,14 @@ Zanotti, Leo Taiberg, David Gurka, Aseem Kumar, and Mary Cheang. Duration
 of hypotension before initiation of effective antimicrobial therapy is the
 critical determinant of survival in human septic shock. \emph{Critical Care
 Medicine}, 34(6):1589--1596, 2006. doi: 10.1097/01.CCM.0000217961.75225.E9.
+
+\bibitem{charalampous2019} Themoula Charalampous, Gemma L Kay, Hollian
+Richardson, Alp Aydin, Rossella Baldan, Christopher Jeanes, Duncan Rae,
+Sara Grundy, Daniel J Turner, John Wain, Richard M Leggett, David M
+Livermore, and Justin O'Grady. Nanopore metagenomics enables rapid clinical
+diagnosis of bacterial lower respiratory infection. \emph{Nature
+Biotechnology}, 37(7):783--792, 2019. doi: 10.1038/s41587-019-0156-5.
+Reports a 6-hour sample-to-answer workflow.
 
 \bibitem{wilson2019} Michael R Wilson, Hannah A Sample, Kelsey C Zorn, Shaun
 Arevalo, Guixia Yu, John Neuhaus, Scot Federman, Doug Stryke, Benjamin
