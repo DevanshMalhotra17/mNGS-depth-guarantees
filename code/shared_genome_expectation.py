@@ -27,8 +27,20 @@ def run(N, mu, G):
     D_theory = 1 - (1 - p * q) ** T
     return D_theory, D_shared, se, f.mean(), f.std()
 
-print("N      mu    D_theory  E[D | shared genome]  (MC se)   mean f   sd f   gap")
+HDR = "N      mu    D_theory  E[D | shared genome]  (MC se)   mean f   sd f   gap"
+
+print("Section 5.4 sweep: the gap shrinks as the genome lengthens")
+print(HDR)
 for N, G in ((5000, 20000), (29903, 5000)):
     for mu in (0.15, 0.18, 0.20):
         Dt, Ds, se, fm, fs = run(N, mu, G)
         print(f"{N:<6} {mu:.2f}  {Dt:.4f}    {Ds:.4f}            ({se:.4f})  {fm:.4f}  {fs:.4f}  {Dt-Ds:.4f}")
+
+# The two Tier 3 rows of Table 3 are the only ones with a non-negligible gap.
+# Both are predicted here without reference to the Table 3 run, so the
+# comparison is a genuine out-of-sample check of the Section 5.4 mechanism.
+print("\nTable 3 Tier 3 scenarios: predicted gap vs the gap actually observed")
+print(HDR)
+for N, mu, G in ((29903, 0.20, 5000), (1737, 0.30, 20000)):
+    Dt, Ds, se, fm, fs = run(N, mu, G)
+    print(f"{N:<6} {mu:.2f}  {Dt:.4f}    {Ds:.4f}            ({se:.4f})  {fm:.4f}  {fs:.4f}  {Dt-Ds:.4f}")

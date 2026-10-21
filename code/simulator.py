@@ -2,18 +2,20 @@
 """
 Component 1: Metagenomic Read Simulator
 ========================================
-Validates Theorems 1-3 from:
+Validates Theorems 3.1, 3.3 and 3.4 from:
   "Minimum Sequencing Depth Guarantees for Reference-Based Detection
    of Divergent Pathogens in Clinical Metagenomic Sequencing"
 
-Fix vs v1: each trial now generates a fresh mutated genome so the
-empirical estimate truly reflects the expectation over all possible
-diverged sequences, not one specific realisation.
+Each trial generates a fresh mutated genome so the empirical estimate
+reflects the expectation over all possible diverged sequences, not one
+specific realisation. Within a trial, however, every read comes from the
+same mutated genome; see Section 5.4 and code/shared_genome_expectation.py
+for the resulting bias, which is of known sign and leaves T* conservative.
 
-Usage:
-    python simulator.py                        # default synthetic genome
-    python simulator.py --genome my.fasta      # real FASTA
-    python simulator.py --p 1e-4 --depth 200000 --trials 200 --seed 42
+Usage (from the repository root):
+    python code/simulator.py                       # reproduces paper Tables 1-2
+    python code/simulator.py --genome my.fasta     # real FASTA
+    python code/simulator.py --p 1e-4 --depth 200000 --trials 200 --seed 42
 """
 
 import argparse
@@ -80,9 +82,13 @@ def is_informative(read, reference_region, w):
 
 def q_recurrence(w, L, mu):
     """
-    Exact informative-read probability (Definition 1.2, Eq. 2).
+    Exact informative-read probability (Definition 2.3, Eqs. 2-4).
     P[n] = P(no run of w consecutive matches in n Bernoulli(1-mu) trials).
     Uses linear recurrence of order w; O(wL) time.
+
+    The boundary condition P[n] = 1 for n < w is essential. It is applied here
+    via the explicit all-successes term below, which makes the n < w rows sum
+    to 1; dropping it gives P[1] = mu and corrupts every q (see Remark 2.5).
     """
     p = 1.0 - mu
     if L < w:
@@ -101,13 +107,19 @@ def q_recurrence(w, L, mu):
 
 
 def q_poisson(w, L, mu):
-    """Poisson approximation (Eq. 3). Accurate only when (1-mu)^w << 1."""
+    """
+    Poisson approximation (Eq. 5). For comparison only -- it overestimates q
+    because overlapping matching windows clump: a run of m >= w matches yields
+    m-w+1 matching windows, so lam overcounts independent chances by ~1/mu.
+    A small lam does not rescue it (at mu=0.30, lam ~ 0.024 yet the ratio to
+    the exact value is still 3.2). Use q_recurrence for any real planning.
+    """
     lam = (L - w + 1) * ((1.0 - mu) ** w)
     return 1.0 - math.exp(-lam)
 
 
 def T_star(p, mu, w, L, delta, use_exact=True):
-    """Minimum depth for delta-detection (Theorem 1, Eq. 4)."""
+    """Minimum depth for delta-detection (Theorem 3.1, Eq. 6)."""
     q = q_recurrence(w, L, mu) if use_exact else q_poisson(w, L, mu)
     if q <= 0.0:
         return float('inf')
@@ -121,7 +133,7 @@ def T_star(p, mu, w, L, delta, use_exact=True):
 
 
 def detection_prob_theory(p, mu, w, L, T):
-    """P(detection) = 1 - (1-p*q)^T from Theorem 1."""
+    """P(detection) = 1 - (1-p*q)^T from Theorem 3.1, Eq. 6."""
     q = q_recurrence(w, L, mu)
     pq = p * q
     if pq <= 0.0:
@@ -130,7 +142,7 @@ def detection_prob_theory(p, mu, w, L, T):
 
 
 def mu_c_numerical(w, L, p, delta, T_max, tol=1e-7):
-    """Bisection for critical divergence mu_c (Theorem 2)."""
+    """Bisection for critical divergence mu_c (Theorem 3.3, Eq. 7)."""
     if T_max <= 0 or T_max == float('inf'):
         return 0.0
     target = math.log(1.0 / delta) / (p * T_max)
@@ -151,7 +163,7 @@ def mu_c_numerical(w, L, p, delta, T_max, tol=1e-7):
 
 
 def w_star(Q, n_avg, alpha):
-    """Optimal window length (Theorem 3, Eq. 6)."""
+    """Optimal window length (Theorem 3.4, Eq. 9)."""
     return math.ceil(math.log(Q * n_avg / alpha) / math.log(4))
 
 
@@ -229,7 +241,7 @@ def experiment_w_sweep(reference, p, mu, L, depth, trials, delta,
 
     HR = '─' * 84
     print(f"\n{HR}")
-    print(f"  EXPERIMENT 2: w-sweep  (cost of over-specification, Theorem 3)")
+    print(f"  EXPERIMENT 2: w-sweep  (cost of over-specification, Theorem 3.4)")
     print(f"  p={p:.1e}  μ={mu}  L={L}  T={depth:,}  δ={delta}")
     print(f"  w*={ws}   T*(w*)={T_opt:,}")
     print(HR)
@@ -259,7 +271,7 @@ def experiment_w_sweep(reference, p, mu, L, depth, trials, delta,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="mNGS Pathogen Detection Simulator — validates Theorems 1-3",
+        description="mNGS Pathogen Detection Simulator — validates Theorems 3.1, 3.3 and 3.4",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--genome',  default='synthetic:5000')
@@ -268,11 +280,14 @@ def main():
     parser.add_argument('--L',       type=int,   default=150)
     parser.add_argument('--delta',   type=float, default=0.01)
     parser.add_argument('--depth',   type=int,   default=100_000)
-    parser.add_argument('--trials',  type=int,   default=100)
+    parser.add_argument('--trials',  type=int,   default=300)
+    # Divergence held fixed for Experiment 2. The paper reports the w-sweep at
+    # mu = 0.10, near mu_c = 0.1349, where over-specifying w costs the most.
+    parser.add_argument('--w_sweep_mu', type=float, default=0.10)
     parser.add_argument('--Q',       type=int,   default=5_000)
     parser.add_argument('--n_avg',   type=int,   default=15_000)
     parser.add_argument('--alpha',   type=float, default=1e-6)
-    parser.add_argument('--out',     default='results.csv')
+    parser.add_argument('--out',     default='data/results.csv')
     parser.add_argument('--seed',    type=int,   default=42)
     args = parser.parse_args()
 
@@ -288,7 +303,7 @@ def main():
     print(f"Reference length: {len(reference):,} bp")
 
     ws = w_star(args.Q, args.n_avg, args.alpha)
-    print(f"w* (Theorem 3): {ws}")
+    print(f"w* (Theorem 3.4): {ws}")
 
     mu_vals = [0.00, 0.02, 0.05, 0.08, 0.10, 0.12, 0.15, 0.18, 0.20]
     mu_results, mu_c = experiment_mu_sweep(
@@ -298,7 +313,7 @@ def main():
 
     w_vals = [ws + k for k in range(0, 12, 2)]
     w_results = experiment_w_sweep(
-        reference, args.p, 0.05, args.L, args.depth, args.trials,
+        reference, args.p, args.w_sweep_mu, args.L, args.depth, args.trials,
         args.delta, w_vals, args.Q, args.n_avg, args.alpha
     )
 
@@ -306,7 +321,8 @@ def main():
         writer = csv.DictWriter(fh, fieldnames=[
             'experiment', 'param_name', 'param_value',
             'q_exact', 'q_approx', 'T_star',
-            'det_theory', 'det_empirical', 'gap', 'ratio', 'tier'
+            'det_theory', 'det_empirical', 'gap', 'ratio', 'tier',
+            'fixed_mu', 'trials'
         ])
         writer.writeheader()
         for r in mu_results:
@@ -315,14 +331,17 @@ def main():
                              'q_approx': r['q_approx'], 'T_star': r['T_star'],
                              'det_theory': r['det_theory'],
                              'det_empirical': r['det_empirical'],
-                             'gap': r['gap'], 'ratio': '', 'tier': r['tier']})
+                             'gap': r['gap'], 'ratio': '', 'tier': r['tier'],
+                             'fixed_mu': '', 'trials': args.trials})
         for r in w_results:
             writer.writerow({'experiment': 'w_sweep', 'param_name': 'w',
                              'param_value': r['w'], 'q_exact': r['q_exact'],
                              'q_approx': '', 'T_star': r['T_star'],
                              'det_theory': r['det_theory'],
                              'det_empirical': r['det_empirical'],
-                             'gap': '', 'ratio': r['ratio'], 'tier': ''})
+                             'gap': '', 'ratio': r['ratio'], 'tier': '',
+                             'fixed_mu': args.w_sweep_mu,
+                             'trials': args.trials})
 
     print(f"\nResults → {args.out}")
     print("Done.")

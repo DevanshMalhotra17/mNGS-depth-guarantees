@@ -9,6 +9,11 @@
 \usepackage{xcolor}
 \hypersetup{colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black, urlcolor=blue!60!black}
 
+% Let TeX stretch interword space on the few lines containing long unbreakable
+% units (accessions, cite groups, \texttt paths) rather than running into the
+% margin. Without this, four prose lines overflow by 2-26pt.
+\emergencystretch=1.5em
+
 % ── Theorem environments (numbering matches the August 31 version) ───────────
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
@@ -30,7 +35,7 @@
        Reference-Based Detection of Divergent Pathogens\\
        in Clinical Metagenomic Sequencing}
 \author{Devansh Malhotra}
-\date{August 31, 2026}
+\date{October 21, 2026}
 
 \begin{document}
 \maketitle
@@ -76,13 +81,15 @@ overestimate exceeding 100\% as $\mu$ approaches $\mu_c$ from below, making
 the exact recurrence essential for conservative depth planning. The same
 approximation also overestimates the critical divergence itself ($0.199$
 versus the exact $0.1349$ at $T_{\max}=10^5$). All results are validated by
-simulation on real SARS-CoV-2 (Wuhan reference), Influenza A H3N2 HA, and
-H1N1 HA genomes across biologically motivated divergence scenarios, with
-theory--empirical gaps of at most $0.062$ across all experiments ($0.033$ on
-the real genomes). The framework extends Eidenschink Brodersen et
-al.\ (2020) by introducing the divergence dimension absent from their model
-and provides the first principled basis for sequencing depth selection in
-mNGS assay design when pathogen identity and divergence are uncertain.
+simulation against real SARS-CoV-2 (Wuhan) and Influenza A H3N2 HA reference
+genomes across biologically motivated divergence scenarios, with
+theory--empirical gaps of at most $0.062$ across all experiments ($0.021$ on
+the real genomes); the residual gaps are themselves predicted by a
+shared-genome correction for reads drawn from a single mutated genome. The
+framework extends Ebinger et al.\ (2021) by introducing the divergence
+dimension absent from their model and provides the first principled basis for
+sequencing depth selection in mNGS assay design when pathogen identity and
+divergence are uncertain.
 \end{abstract}
 
 \newpage
@@ -204,7 +211,7 @@ Bernoulli trials.
 The question of how much sequencing depth is needed to detect a given
 pathogen is not new, but it has only been addressed incompletely.
 
-Eidenschink Brodersen et al.~\cite{brodersen2020} derive a minimum
+Ebinger et al.~\cite{ebinger2021} derive a minimum
 sequencing depth formula using a Bernoulli probability model. Their result
 correctly captures the effect of abundance $p$ and genome length $N$: lower
 abundance and shorter genomes require deeper sequencing to guarantee
@@ -250,7 +257,7 @@ The present paper makes the following contributions.
   overestimate exceeding 100\% as $\mu$ approaches $\mu_c$ from below ---
   precisely the regime of greatest clinical relevance (Section~4.3).
 
-  \item \textbf{Theorem 1: Minimum sequencing depth.} The minimum number of
+  \item \textbf{Theorem 3.1: Minimum sequencing depth.} The minimum number of
   reads guaranteeing $\delta$-detection of a pathogen at abundance $p$ with
   divergence $\mu$ under $w$-mer classification with read length $L$ is
   proved to be:
@@ -263,7 +270,7 @@ The present paper makes the following contributions.
   implications: more divergent pathogens and longer classifier windows both
   require deeper sequencing.
 
-  \item \textbf{Theorem 2: Critical divergence $\mu_c$.} The critical
+  \item \textbf{Theorem 3.3: Critical divergence $\mu_c$.} The critical
   divergence $\mu_c$ --- the maximum divergence at which detection can be
   guaranteed within a practical sequencing budget $T_{\max}$ --- is defined
   and proved to be the unique solution to
@@ -275,7 +282,7 @@ The present paper makes the following contributions.
   it --- providing a formal basis for the practical preference for long-read
   platforms in novel-pathogen detection.
 
-  \item \textbf{Theorem 3: Optimal classifier window $w^{*}$.} An inherent
+  \item \textbf{Theorem 3.4: Optimal classifier window $w^{*}$.} An inherent
   sensitivity--specificity tradeoff governs the choice of $w$: smaller $w$
   increases $q(w,L,\mu)$ (greater sensitivity to diverged pathogens) but
   raises the probability of spurious matches from background DNA (reduced
@@ -285,26 +292,34 @@ The present paper makes the following contributions.
     w^{*}=\left\lceil \log_4\!\left(\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\right)\right\rceil,
   \]
   and that the depth penalty for over-specifying $w$ beyond $w^{*}$ grows
-  rapidly with divergence (Section~3.3). For standard database and
-  specificity parameters, this yields $w^{*}=24$ --- the empirical value
-  used by SecureDNA and similar systems, here receiving its first
-  theoretical justification.
+  rapidly with divergence (Section~3.3). For a curated database of
+  $Q=5{,}000$ sequences of average length $n_{\mathrm{avg}}=15{,}000$ bp
+  with $\alpha=10^{-6}$, this yields $w^{*}=24$. The same expression
+  accounts for the longer windows used in production screening, which
+  index far larger databases: at a Kraken 2--scale reference of
+  $\approx10^{11}$ bp it gives $w^{*}=29$, below Kraken 2's default
+  $k=35$~\cite{wood2019} and the 42 bp window used by
+  SecureDNA~\cite{securedna}, both of which therefore satisfy the
+  specificity constraint with margin.
 
   \item \textbf{Empirical validation on real genomes.} All three theorems
-  are validated by simulation on the SARS-CoV-2 Wuhan reference genome
-  (29,903 bp), Influenza A H3N2 HA segment (1,737 bp), and Influenza A H1N1
-  HA segment (1,752 bp), with biologically motivated divergence values
-  spanning Tier 1 through Tier 3. The maximum gap between theoretical
-  prediction and empirical detection rate is $0.033$ across the real-genome
-  scenarios (Section~4.5) and $0.062$ across all experiments
-  (Section~4.3).
+  are validated by simulation against two real reference genomes --- the
+  SARS-CoV-2 Wuhan reference (29,903 bp) and the Influenza A H3N2 HA segment
+  (1,737 bp) --- with biologically motivated divergence values spanning Tier
+  1 through Tier 3, including a cross-subtype scenario calibrated to the
+  divergence of the H1N1 HA segment (1,752 bp). The maximum gap between
+  theoretical prediction and empirical detection rate is $0.021$ across the
+  real-genome scenarios (Section~4.5) and $0.062$ across all experiments
+  (Section~4.3); in both cases the residual is accounted for by the
+  shared-genome correction of Section~5.4.
 \end{enumerate}
 
 \subsection{Paper Organization}
 
 Section~2 establishes the formal model, including the exact definition of
 $q(w,L,\mu)$ and the linear recurrence used to compute it. Section~3 states
-and proves Theorems~1--3 and their corollaries. Section~4 describes the
+and proves Theorems~3.1, 3.3 and 3.4 and their corollaries. Section~4
+describes the
 simulation methodology and presents the real-genome validation results.
 Section~5 discusses implications for clinical assay design, the failure
 regime of the Poisson approximation, and directions for future work.
@@ -357,11 +372,16 @@ Under the independent-substitution model, each base of $r$ independently
 agrees with the reference with probability $1-\mu$. Define
 $P_n=P_n(w,1-\mu)$ as the probability that a sequence of $n$ independent
 Bernoulli$(1-\mu)$ trials contains \emph{no} run of $w$ consecutive
-successes. $P_n$ satisfies the linear recurrence
-\begin{equation}\label{eq:recurrence}
-  P_n=\sum_{j=0}^{\min(n-1,\,w-1)}(1-\mu)^{j}\,\mu\,P_{n-j-1},\qquad n\ge 1,
+successes. With the boundary condition
+\begin{equation}\label{eq:boundary}
+  P_n=1\qquad\text{for }0\le n\le w-1
 \end{equation}
-with $P_0=1$. The exact informative probability is then
+(no run of length $w$ fits in fewer than $w$ trials), $P_n$ satisfies the
+linear recurrence
+\begin{equation}\label{eq:recurrence}
+  P_n=\sum_{j=0}^{w-1}(1-\mu)^{j}\,\mu\,P_{n-j-1},\qquad n\ge w.
+\end{equation}
+The exact informative probability is then
 \begin{equation}\label{eq:qexact}
   q(w,L,\mu)=1-P_L(w,1-\mu).
 \end{equation}
@@ -373,14 +393,31 @@ independent, and is used hereafter only for closed-form comparison
 \end{equation}
 
 \begin{remark}[Derivation of recurrence \eqref{eq:recurrence}]\label{rem:deriv}
-Condition on the position of the first failure (mismatch, probability
-$\mu$) in the Bernoulli sequence. If the first failure occurs at position
-$j+1$ for $j\in\{0,\dots,w-1\}$, the preceding $j$ bases are successes, no
-run of length $w$ has yet been completed, and the problem reduces to the
-remaining $n-j-1$ trials. Summing over all such $j$ yields
-\eqref{eq:recurrence}. The recurrence has order $w$ and can be evaluated in
-$O(wL)$ time, making it computationally tractable for the parameter ranges
-of interest ($w\le 40$, $L\le 300$).
+For $n<w$ no run of length $w$ fits in the sequence, which gives the
+boundary condition \eqref{eq:boundary}. For $n\ge w$, condition on the
+position of the first failure (mismatch, probability $\mu$) in the Bernoulli
+sequence. If the first failure occurs at position $j+1$ for
+$j\in\{0,\dots,w-1\}$, the preceding $j$ bases are successes, no run of
+length $w$ has yet been completed, and the problem reduces to the remaining
+$n-j-1$ trials. If instead no failure occurs among the first $w$ trials, a
+run of length $w$ has already been completed, an outcome excluded from
+$P_n$; these $w+1$ cases are exhaustive and mutually exclusive, so summing
+over $j$ yields \eqref{eq:recurrence}. As a check,
+$P_w=\sum_{j=0}^{w-1}(1-\mu)^{j}\mu=1-(1-\mu)^{w}$, the probability that the
+$w$ trials are not all successes. The recurrence has order $w$ and can be
+evaluated in $O(wL)$ time, making it computationally tractable for the
+parameter ranges of interest ($w\le 40$, $L\le 300$).
+\end{remark}
+
+\begin{remark}[Boundary condition]\label{rem:boundary}
+The boundary condition \eqref{eq:boundary} is not optional. Replacing it
+with $P_0=1$ and truncating the sum at $\min(n-1,w-1)$ --- a natural-looking
+alternative --- omits the all-successes case for $n<w$ and yields
+$P_1=\mu$ rather than $P_1=1$. The resulting error propagates: at $w=24$,
+$L=150$ it gives $q=0.949$ at $\mu=0.12$ and $q=0.824$ at $\mu=0.20$,
+against the correct values $0.580$ and $0.119$ (Table~1), which would make
+the Poisson approximation of \eqref{eq:poisson} appear conservative rather
+than optimistic.
 \end{remark}
 
 \begin{definition}[Detection event]\label{def:detection}
@@ -396,7 +433,7 @@ to guarantee $\delta$-detection if $\Pr(\overline{E})\le\delta$.
 \subsection{Minimum Sequencing Depth}
 
 \begin{theorem}[Minimum sequencing depth]\label{thm:depth}
-Under the model of Definitions~2.1--2.5, the minimum sequencing depth
+Under the model of Definitions~2.1--2.6, the minimum sequencing depth
 guaranteeing $\delta$-detection is
 \begin{equation}\label{eq:tstar}
   T^{*}(p,\mu,w,L,\delta)=\left\lceil\frac{\ln(1/\delta)}{-\ln\bigl(1-p\cdot q(w,L,\mu)\bigr)}\right\rceil
@@ -507,8 +544,9 @@ $P_{\mathrm{FP}}(w)\le\alpha$ is
 \begin{equation}\label{eq:wstar}
   w^{*}=\left\lceil\log_4\!\left(\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\right)\right\rceil.
 \end{equation}
-For $\mu>0$, using any $w>w^{*}$ strictly increases required sequencing depth
-without improving false-positive performance.
+For $\mu>0$, any $w>w^{*}$ strictly increases the required sequencing depth
+while providing no benefit that the constraint
+$P_{\mathrm{FP}}(w)\le\alpha$ demands.
 \end{theorem}
 
 \begin{proof}
@@ -530,11 +568,32 @@ ratio is $2.3$ at $\mu=0.10$, $3.9$ at $\mu_c=0.1349$, and $9.7$ at
 $\mu=0.20$.
 \end{proof}
 
+The parameters used throughout this paper are a curated reference database of
+$Q=5{,}000$ sequences of average length $n_{\mathrm{avg}}=15{,}000$ bp (a
+total of $7.5\times10^{7}$ bp of reference sequence) and a per-query
+false-positive target $\alpha=10^{-6}$. For these values
+$\log_4(Q\,n_{\mathrm{avg}}/\alpha)=23.05$, so Eq.~\eqref{eq:wstar} gives
+$w^{*}=24$. These are the default values in \texttt{code/simulator.py}, and
+all experiments in Section~4 use $w=w^{*}=24$.
+
+Eq.~\eqref{eq:wstar} is a lower bound on the window length needed to meet a
+given false-positive target, and it is consistent with the defaults chosen by
+deployed screening systems once the size of their databases is taken into
+account. Kraken 2 classifies against references many orders of magnitude
+larger than the curated database assumed above; for a total reference size of
+$\approx10^{11}$ bp at the same $\alpha$, Eq.~\eqref{eq:wstar} gives
+$w^{*}=29$, and Kraken 2's default $k=35$~\cite{wood2019} exceeds this.
+SecureDNA screens synthesis orders against a hazard database using a 42 bp
+DNA window~\cite{securedna}, likewise above the bound. In both cases the
+specificity constraint is satisfied with margin, which Theorem~3.4 shows is
+not free: the margin is paid for in required sequencing depth whenever the
+target is diverged from the reference.
+
 \begin{remark}[Tradeoff sharpening under divergence]\label{rem:tradeoff}
 At $\mu=0$, $q(w,L,0)=1$ for all $w\le L$, so $T^{*}$ is independent of $w$
 and any $w\ge w^{*}$ is acceptable. For $\mu>0$, $T^{*}$ grows strictly in
-$w$ beyond $w^{*}$, and the numerical penalty grows rapidly with $\mu$
-(Section~3.3 and Table~2). This is the central design implication: as
+$w$ beyond $w^{*}$, and the numerical penalty grows rapidly with $\mu$ (the
+proof of Theorem~3.4 and Table~2). This is the central design implication: as
 genomic divergence increases, the penalty for over-specifying $w$ grows,
 making the principled choice of $w=w^{*}$ progressively more consequential.
 \end{remark}
@@ -545,7 +604,7 @@ making the principled choice of $w=w^{*}$ progressively more consequential.
 \subsection{Simulation Methodology}
 
 All experiments are conducted using a Python simulator developed specifically
-to validate Theorems~1--3. The simulator implements the following pipeline
+to validate Theorems~3.1, 3.3 and 3.4. The simulator implements the following pipeline
 for each parameter configuration $(p,\mu,w,L,T,n_{\text{trials}})$:
 \begin{enumerate}
   \item \textbf{Pathogen genome generation.} For each independent trial, a
@@ -564,8 +623,8 @@ for each parameter configuration $(p,\mu,w,L,T,n_{\text{trials}})$:
   read, sampling a uniformly random start position and extracting a
   length-$L$ substring from the diverged pathogen genome.
 
-  \item \textbf{Informative-read test.} For each pathogen read, we slide a
-  window of length $w$ across all $L-w+1$ positions and check whether any
+  \item \textbf{Informative-read test.} For each pathogen read, a window of
+  length $w$ is slid across all $L-w+1$ positions to check whether any
   window in the read is an exact character-for-character match to the
   corresponding window in the reference sequence at the same start position.
   If at least one window matches, the read is declared informative and
@@ -599,9 +658,10 @@ For each parameter set, four quantities are derived from the theory:
 \subsection{Experiment 1: Synthetic Genome $\mu$-Sweep}
 
 Using a synthetic 5,000 bp reference sequence drawn uniformly from
-$\{A,T,G,C\}$, I sweep divergence $\mu$ over nine values from 0 to 0.20
-($0$, $0.02$, $0.05$, $0.08$, $0.10$, $0.12$, $0.15$, $0.18$, $0.20$) and
-report theoretical and empirical detection rates at $T=100{,}000$ reads.
+$\{A,T,G,C\}$, divergence $\mu$ is swept over nine values from 0 to 0.20
+($0$, $0.02$, $0.05$, $0.08$, $0.10$, $0.12$, $0.15$, $0.18$, $0.20$), and
+theoretical and empirical detection rates are reported at $T=100{,}000$
+reads.
 
 \begin{table}[!ht]
 \centering
@@ -616,18 +676,18 @@ $\mu$ & $q_{\mathrm{exact}}$ & $q_{\mathrm{Poisson}}$ & $T^{*}$ & $D_{\mathrm{th
 0.08 & 0.88146 & 1.00000 &  52,243 & 0.9999 & 1.0000 & 0.0001 \\
 0.10 & 0.74376 & 0.99996 &  61,915 & 0.9994 & 1.0000 & 0.0006 \\
 0.12 & 0.57992 & 0.99728 &  79,409 & 0.9970 & 0.9967 & 0.0003 \\
-0.15 & 0.35157 & 0.92343 & 130,987 & 0.9703 & 0.9667 & 0.0036 \\
+0.15 & 0.35157 & 0.92343 & 130,987 & 0.9703 & 0.9700 & 0.0003 \\
 0.18 & 0.18908 & 0.66202 & 243,553 & 0.8491 & 0.7967 & 0.0524 \\
 0.20 & 0.11875 & 0.45105 & 387,793 & 0.6950 & 0.6333 & 0.0617 \\
 \bottomrule
 \end{tabular}
 \caption{Synthetic-genome $\mu$-sweep at $T=100{,}000$ reads, $p=10^{-4}$,
 $w=24$, $L=150$, $\delta=0.01$, 300 trials per row, random seed 42
-(reproducible via \texttt{code/simulator.py}). $\mu_c=0.1349$ (at
+(reproduce with \texttt{python code/simulator.py}). $\mu_c=0.1349$ (at
 $T_{\max}=10^5$): rows at or below this threshold are Tier~2, rows above are
 Tier~3. $|\Delta|$ denotes the absolute difference between theoretical and
-empirical detection rates. The largest gaps ($0.052$ at $\mu=0.18$, $0.062$
-at $\mu=0.20$) occur where $D_{\mathrm{theory}}$ lies between $0.5$ and
+empirical detection rates. The largest gaps ($0.0524$ at $\mu=0.18$,
+$0.0617$ at $\mu=0.20$) occur where $D_{\mathrm{theory}}$ lies between $0.5$ and
 $0.9$, where binomial variance is largest, and are mostly explained by the
 shared-genome effect of Section~5.4 (expected gaps of $0.031$ and $0.041$ for
 a 5,000 bp genome); the residuals are within one standard error
@@ -675,7 +735,7 @@ $w$ & $T^{*}(w)$ & Ratio $T^{*}(w)/T^{*}(w^{*})$ \\
 \bottomrule
 \end{tabular}
 \caption{Window-length sweep at $\mu=0.10$, $p=10^{-4}$, $L=150$,
-$\delta=0.01$. $T^{*}(w)$ is exactly increasing in $w$, confirming
+$\delta=0.01$. $T^{*}(w)$ is strictly increasing in $w$, confirming
 Theorem~3.4.}
 \end{table}
 
@@ -685,50 +745,82 @@ boundary, and raises it $3.9$-fold at $\mu_c$ itself.
 
 \subsection{Real-Genome Validation}
 
-Theoretical bounds are evaluated on three real pathogen reference genomes
-retrieved from Nextstrain~\cite{nextstrain}: SARS-CoV-2 Wuhan reference
-(GenBank MN908947, 29,903 bp)~\cite{wu2020}; Influenza A H3N2 HA segment
-(CY163680.1, 1,737 bp); and Influenza A H1N1 HA segment (CY121680.1, 1,752
-bp). Biologically motivated divergence values are used: known inter-strain
-distances from the literature~\cite{viana2022,bedford2010}.
+Theoretical bounds are evaluated against two real reference genomes retrieved
+from Nextstrain~\cite{nextstrain}: the SARS-CoV-2 Wuhan reference (GenBank
+MN908947, 29,903 bp)~\cite{wu2020} and the Influenza A H3N2 HA segment
+(CY163680.1, 1,737 bp). Biologically motivated divergence values are used:
+known inter-strain distances from the
+literature~\cite{viana2022,bedford2010}.
+
+Each scenario mutates the stated reference at the chosen $\mu$ and queries
+the result against that same reference, so the reference listed in a given
+row is also the genome being mutated. The two cross-family rows accordingly
+model a divergent pathogen rather than aligning two downloaded genomes: the
+SARS-CoV-1 row applies $\mu=0.20$ to the SARS-CoV-2 reference, and the
+cross-subtype row applies $\mu=0.30$ to the H3N2 HA reference, that figure
+being the approximate HA nucleotide divergence between the H3N2 and H1N1
+subtypes. The H1N1 HA segment (CY121680.1, 1,752 bp) is the source of that
+divergence estimate and is included in \texttt{data/} for reference; it is
+not itself used as a simulation reference, which is why the cross-subtype
+row reports $N=1{,}737$ rather than $1{,}752$. Extending the model to
+indels, which a true pairwise alignment of the two subtypes would require,
+is left to future work (Section~5.4).
 
 \begin{table}[!ht]
 \centering
 \footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lrrrrrrc}
+% 9 columns at the default 6pt separation overflow the text block by 2.4pt;
+% 3.5pt keeps the table inside the margin without shrinking the font further.
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lrrrrrrrc}
 \toprule
-Scenario & $N$ & $\mu$ & $q_{\mathrm{exact}}$ & $D_{\mathrm{theory}}$ & $D_{\mathrm{empirical}}$ & $|\Delta|$ & Tier \\
+Scenario & $N$ & $\mu$ & $q_{\mathrm{exact}}$ & $D_{\mathrm{theory}}$ & $D_{\mathrm{empirical}}$ & SE & $|\Delta|$ & Tier \\
 \midrule
-SARS-CoV-2 Wuhan $\to$ Wuhan    & 29,903 & 0.0000 & 1.00000 & 1.000 & 1.000 & 0.000 & 1 \\
-SARS-CoV-2 Wuhan $\to$ Omicron  & 29,903 & 0.0017 & 1.00000 & 1.000 & 1.000 & 0.000 & 2 \\
-SARS-CoV-2 Wuhan $\to$ SARS-CoV-1 & 29,903 & 0.2000 & 0.11875 & 0.695 & 0.663 & 0.033 & 3 \\
-H3N2 HA: same season            & 1,737  & 0.0000 & 1.00000 & 1.000 & 1.000 & 0.000 & 1 \\
-H3N2 HA: 1-year drift           & 1,737  & 0.0100 & 1.00000 & 1.000 & 1.000 & 0.000 & 2 \\
-H3N2 HA: 5-year drift           & 1,737  & 0.0500 & 0.98598 & 1.000 & 1.000 & 0.000 & 2 \\
-H3N2 vs H1N1 HA (cross-subtype) & 1,752  & 0.3000 & 0.00742 & 0.072 & 0.075 & 0.004 & 3 \\
+SARS-CoV-2 Wuhan $\to$ Wuhan    & 29,903 & 0.0000 & 1.00000 & 1.0000 & 1.0000 & 0.0000 & 0.0000 & 1 \\
+SARS-CoV-2 Wuhan $\to$ Omicron  & 29,903 & 0.0017 & 1.00000 & 1.0000 & 1.0000 & 0.0000 & 0.0000 & 2 \\
+SARS-CoV-2 Wuhan $\to$ SARS-CoV-1 & 29,903 & 0.2000 & 0.11875 & 0.6950 & 0.6840 & 0.0104 & 0.0110 & 3 \\
+H3N2 HA: same season            & 1,737  & 0.0000 & 1.00000 & 1.0000 & 1.0000 & 0.0000 & 0.0000 & 1 \\
+H3N2 HA: 1-year drift           & 1,737  & 0.0100 & 1.00000 & 1.0000 & 0.9995 & 0.0005 & 0.0005 & 2 \\
+H3N2 HA: 5-year drift           & 1,737  & 0.0500 & 0.98598 & 0.9999 & 1.0000 & 0.0000 & 0.0001 & 2 \\
+H3N2 vs H1N1 HA (cross-subtype) & 1,737  & 0.3000 & 0.00742 & 0.0715 & 0.0505 & 0.0049 & 0.0210 & 3 \\
 \bottomrule
 \end{tabular}
 \caption{Real-genome validation at $T=100{,}000$ reads, $p=10^{-4}$, $w=24$,
-$L=150$, $\delta=0.01$, 400 trials per row, $\mu_c=0.1349$ (at
+$L=150$, $\delta=0.01$, 2,000 trials per row, $\mu_c=0.1349$ (at
 $T_{\max}=10^5$). Divergence values for SARS-CoV-2 variants are sourced from
 \cite{wu2020,viana2022}; influenza inter-season drift estimates from
-\cite{bedford2010}. Maximum theory--empirical gap on the real genomes:
-$|\Delta|=0.033$; the largest gap in the paper is $0.062$ (Table~1,
-$\mu=0.20$).}
+\cite{bedford2010}. SE is the binomial standard error of the Monte Carlo
+estimate, $\sqrt{D_{\mathrm{empirical}}(1-D_{\mathrm{empirical}})/2{,}000}$.
+Detection rates are reported to four decimals, matching Table~1, so that the
+$|\Delta|$ column is reproducible from the two columns preceding it. The
+cross-subtype row applies $\mu=0.30$ to the H3N2 HA reference, hence
+$N=1{,}737$. Maximum theory--empirical gap on the real genomes:
+$|\Delta|=0.0210$; the largest gap in the paper is $0.0617$ (Table~1,
+$\mu=0.20$). Reproduce with \texttt{python code/real\_genomes.py} (seed 42).}
 \end{table}
-% VERIFY: "400 trials per row" is inferred from data/results_real_genomes.csv
-% (0.6625 = 265/400, 0.075 = 30/400); confirm against the run log.
 
 The results in Table~3 demonstrate that the theoretical bound is accurate
 across a range spanning two orders of magnitude in $\mu$ ($0.0017$ to $0.3$)
-and two distinct pathogen families. All Tier 2 scenarios achieve empirical
-detection rates at or above the theoretical prediction. The two Tier 3
-scenarios (SARS-CoV-2 to SARS-CoV-1; H3N2 to H1N1 cross-subtype) show
-detection rates well below unity at $T=100{,}000$, consistent with the bound
-prediction $D_{\mathrm{theory}}<1-\delta$; where empirical rates fall
-slightly below theory, this is the expected effect of drawing all reads in a
-trial from one mutated genome (Section~5.4).
+and two distinct pathogen families. Every Tier 2 scenario achieves an
+empirical detection rate within one standard error of the theoretical
+prediction. The two Tier 3 scenarios (SARS-CoV-2 to SARS-CoV-1; H3N2 to H1N1
+cross-subtype) show detection rates well below unity at $T=100{,}000$,
+consistent with the bound prediction $D_{\mathrm{theory}}<1-\delta$.
+
+Both Tier 3 rows fall below theory, and the size of each shortfall is
+predicted quantitatively by the shared-genome correction of Section~5.4,
+which accounts for all reads in a trial being drawn from a single mutated
+genome. Evaluating that correction at the two scenarios' parameters --- and
+independently of the Table~3 run itself --- gives
+$\E[D]=0.6895$ at $N=29{,}903$, $\mu=0.20$ and $\E[D]=0.0517$ at $N=1{,}737$,
+$\mu=0.30$, against observed rates of $0.6840\pm0.0104$ and
+$0.0505\pm0.0049$. Both predictions land within one standard error of the
+observation, so the $|\Delta|$ values of $0.0110$ and $0.0210$ are not
+unexplained model error but the expected consequence of single-genome
+sampling. The correction is largest for the cross-subtype row because that
+scenario combines the shortest genome ($N=1{,}737$) with the highest
+divergence ($\mu=0.30$), exactly the regime in which Section~5.4 predicts
+the greatest spread in the per-genome informative fraction.
 
 The SARS-CoV-2 to Omicron scenario is of particular interest: Omicron BA.1
 has approximately 50 substitution mutations relative to the Wuhan reference
@@ -777,9 +869,9 @@ in Table~1 is not merely a mathematical curiosity; it has concrete
 consequences for sequencing depth estimation.
 
 At $\mu=0.12$, the Poisson approximation gives
-$q_{\mathrm{Poisson}}\approx0.997$, yielding $T^{*}\approx46{,}200$ reads ---
+$q_{\mathrm{Poisson}}\approx0.997$, yielding $T^{*}=46{,}175$ reads ---
 nearly the same as for an exact reference match. The exact recurrence gives
-$q_{\mathrm{exact}}=0.580$, yielding $T^{*}\approx79{,}400$ reads --- 72\%
+$q_{\mathrm{exact}}=0.580$, yielding $T^{*}=79{,}409$ reads --- 72\%
 more. A laboratory using the Poisson approximation to plan its sequencing
 depth would be under-sequencing by a factor of 1.72 for pathogens at this
 level of divergence. The problem worsens closer to the detection boundary:
@@ -790,7 +882,7 @@ $\mu_c=0.1349$ --- meaning the approximation is least reliable exactly where
 the detection guarantee is most marginal and most consequential to get
 right.
 
-The overestimate is negligible at small divergence (ratio $1.00$ at
+The overestimate is negligible at small divergence (ratio at most $1.01$ for
 $\mu\le0.05$) and grows with $\mu$: $1.34$ at $\mu=0.10$, $1.72$ at $0.12$,
 and $3.8$ at $0.20$. It does not require $\lambda$ to be large; at
 $\mu=0.30$, $\lambda\approx0.024$ yet the ratio is still $3.2$. The cause is
@@ -844,12 +936,17 @@ $f$, Jensen's inequality gives
 $\E\bigl[1-(1-pf)^{T}\bigr]\le1-(1-p\,\E[f])^{T}$, with $\E[f]=q$:
 expected empirical detection is at most the theoretical value, with a gap
 that shrinks as the genome length grows. Computing this expectation directly
-for $T=10^{5}$ gives $0.818$ at $\mu=0.18$ and $0.654$ at $\mu=0.20$ for a
-5,000 bp genome (theory: $0.849$ and $0.695$; Table~1 empirical: $0.797$ and
-$0.633$, each within about one standard error of the expectation), and
-$0.689$ at $\mu=0.20$ for a 29,903 bp genome (theory $0.695$; Table~3
-empirical $0.663$). The effect is therefore largest for short genomes and
-small for SARS-CoV-2-length genomes.
+for $T=10^{5}$ (\texttt{code/shared\_genome\_expectation.py}) gives $0.818$
+at $\mu=0.18$ and $0.654$ at $\mu=0.20$ for a 5,000 bp genome (theory:
+$0.849$ and $0.695$; Table~1 empirical: $0.797$ and $0.633$, each within
+about one standard error of the expectation). The same computation accounts
+for both Tier 3 rows of Table~3: it predicts $0.6895$ at $N=29{,}903$,
+$\mu=0.20$ and $0.0517$ at $N=1{,}737$, $\mu=0.30$, against observed
+$0.6840\pm0.0104$ and $0.0505\pm0.0049$, in each case closing essentially
+all of the gap to the theoretical $0.6950$ and $0.0715$. The effect is
+therefore largest for short, highly diverged genomes and small for
+SARS-CoV-2-length genomes --- and, being a bias of known sign, it leaves
+$T^{*}$ conservative rather than optimistic.
 
 \paragraph{Non-uniform genome coverage.} Reads are modeled as drawn uniformly
 from the pathogen genome. Real sequencing exhibits GC-dependent amplification
@@ -921,39 +1018,49 @@ Guidelines on the clinical management of sepsis. 2024. URL
 Estimates: 48.9 million cases and 11 million deaths globally in 2017.
 
 \bibitem{kumar2006} Anand Kumar, Daniel Roberts, Kenneth E Wood, Bruce Light,
-Joseph E Parrillo, Satendra Sharma, Rhonda Suppes, Daniel Feinstein, Sergio
-Zanotti, Lee Taiberg, David Gurka, Aseem Kumar, and Matthew Cheang. Duration
+Joseph E Parrillo, Satendra Sharma, Robert Suppes, Daniel Feinstein, Sergio
+Zanotti, Leo Taiberg, David Gurka, Aseem Kumar, and Mary Cheang. Duration
 of hypotension before initiation of effective antimicrobial therapy is the
 critical determinant of survival in human septic shock. \emph{Critical Care
 Medicine}, 34(6):1589--1596, 2006. doi: 10.1097/01.CCM.0000217961.75225.E9.
 
 \bibitem{wilson2019} Michael R Wilson, Hannah A Sample, Kelsey C Zorn, Shaun
 Arevalo, Guixia Yu, John Neuhaus, Scot Federman, Doug Stryke, Benjamin
-Briggs, Charles Langelier, Anthony Berger, Victoria Douglas, S Andrew
-Josephson, Felicia C Chow, Bryce D Fulton, Joseph L DeRisi, and Jeffrey M
-Gelfand. Clinical metagenomic sequencing for diagnosis of meningitis and
+Briggs, Charles Langelier, Amy Berger, Vanja Douglas, S Andrew Josephson,
+Felicia C Chow, Brent D Fulton, Joseph L DeRisi, Jeffrey M Gelfand, et al.
+Clinical metagenomic sequencing for diagnosis of meningitis and
 encephalitis. \emph{New England Journal of Medicine}, 380(24):2327--2340,
 2019. doi: 10.1056/NEJMoa1803396.
 
 \bibitem{wood2019} Derrick E Wood, Jennifer Lu, and Ben Langmead. Improved
 metagenomic analysis with Kraken 2. \emph{Genome Biology}, 20(1):257, 2019.
-doi: 10.1186/s13059-019-1891-0.
+doi: 10.1186/s13059-019-1891-0. Default classification parameters: $k=35$,
+minimizer length $\ell=31$.
 
-\bibitem{brodersen2020} Lori Eidenschink Brodersen, Priya Jain, Amy S Gargis,
-Dhvani Batra, Justin Cha, Mili Sheth, Joseph D Lutgring, Alexis C Brown, J
-Kamile Rasheed, and Erica A Karlsson. A theoretical and generalized approach
-for the assessment of the sample-specific limit of detection for clinical
-metagenomics. \emph{Computational and Structural Biotechnology Journal},
-18:2002--2013, 2020. doi: 10.1016/j.csbj.2020.07.005.
+\bibitem{securedna} Carsten Baum, Jens Berlips, Walther Chen, Helena
+Cozzarini, Hongrui Cui, Ivan Damg\aa{}rd, Jiangbin Dong, Kevin M Esvelt,
+Leonard Foner, Mingyu Gao, et al. A system capable of verifiably and
+privately screening global DNA synthesis. \emph{National Science Review},
+13(14):nwag103, 2026. doi: 10.1093/nsr/nwag103. The 42 bp DNA screening
+window is the constant \texttt{WINDOW\_LENGTH\_DNA\_NORMAL} in
+\texttt{crates/shared\_types/src/hash.rs} of
+\url{https://github.com/SecureDNA/SecureDNA}.
+
+\bibitem{ebinger2021} Arnt Ebinger, Susanne Fischer, and Dirk H\"oper. A
+theoretical and generalized approach for the assessment of the
+sample-specific limit of detection for clinical metagenomics.
+\emph{Computational and Structural Biotechnology Journal}, 19:732--742, 2021.
+doi: 10.1016/j.csbj.2020.12.040.
 
 \bibitem{blanca2022} Antonio Blanca, Robert S Harris, David Koslicki, and Paul
 Medvedev. The statistics of k-mers from a sequence undergoing a simple
 mutation process without spurious matches. \emph{Journal of Computational
-Biology}, 29(2):146--163, 2022. doi: 10.1089/cmb.2021.0431.
+Biology}, 29(2):155--168, 2022. doi: 10.1089/cmb.2021.0431.
 
 \bibitem{hera2023} Mahmudur Rahman Hera, N Tessa Pierce-Ward, and David
-Koslicki. Recovering the tree of life from k-mers. \emph{bioRxiv}, 2023. doi:
-10.1101/2023.12.01.569611.
+Koslicki. Deriving confidence intervals for mutation rates across a wide
+range of evolutionary distances using FracMinHash. \emph{Genome Research},
+33(7):1061--1068, 2023. doi: 10.1101/gr.277651.123.
 
 \bibitem{lander1988} Eric S Lander and Michael S Waterman. Genomic mapping by
 fingerprinting random clones: a mathematical analysis. \emph{Genomics},

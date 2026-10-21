@@ -12,22 +12,24 @@ Figure 1 — Detection rate vs divergence (μ-sweep)
 
 Figure 2 — Optimal w* and cost of over-specification
   Left: q_exact(w) vs w for several μ values.
-  Right: T*(w)/T*(w*) ratio vs w, showing cost diverges as μ → μ_c.
+  Right: T*(w)/T*(w*) ratio vs w, showing the cost of over-specification
+  grows rapidly with μ (finite at μ_c: 3.9 for w*=24, Δ=10).
 
 Figure 3 — Parameter phase diagram (p, μ) → log T*
   Heatmap of log₁₀ T* over the full parameter space.
   Contour lines at practical depth limits.
   Bold μ_c boundary curve.
 
-Usage:
-    python plot_figures.py                    # uses results.csv if present
-    python plot_figures.py --csv results.csv  # explicit CSV path
-    python plot_figures.py --no-empirical     # theory-only (no CSV needed)
+Usage (from the repository root):
+    python code/plot_figures.py                     # data/results.csv -> figures/
+    python code/plot_figures.py --csv other.csv     # explicit CSV path
+    python code/plot_figures.py --no-empirical      # theory-only (no CSV needed)
 """
 
 import argparse
 import csv
 import math
+import os
 import sys
 
 import matplotlib
@@ -36,6 +38,28 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
 import numpy as np
+
+# ── Output ───────────────────────────────────────────────────────────────────
+
+# Each figure is written twice: a PDF for LaTeX inclusion and a PNG under the
+# short name README.md embeds, so one command regenerates everything in
+# figures/ that the repository actually displays.
+PNG_ALIAS = {
+    'figure1_detection_vs_mu.pdf': 'fig1.png',
+    'figure2_wstar_tradeoff.pdf':  'fig2.png',
+    'figure3_phase_diagram.pdf':   'fig3.png',
+}
+
+
+def save_figure(fig, outpath, dpi=200):
+    fig.savefig(outpath, bbox_inches='tight')
+    print(f"  Saved → {outpath}")
+    alias = PNG_ALIAS.get(os.path.basename(outpath))
+    if alias:
+        png = os.path.join(os.path.dirname(outpath), alias)
+        fig.savefig(png, bbox_inches='tight', dpi=dpi)
+        print(f"  Saved → {png}")
+    plt.close(fig)
 
 # ── Reuse math from simulator (inline copies so this file is standalone) ─────
 
@@ -168,10 +192,10 @@ def figure1(p, w, L, delta, depth, mu_c,
     # Theory curves
     ax.plot(mu_dense, det_exact,
             color=COLORS['exact'], lw=2.2, zorder=5,
-            label='Theorem 1 (exact recurrence)')
+            label='Theorem 3.1 (exact recurrence)')
     ax.plot(mu_dense, det_poisson,
             color=COLORS['poisson'], lw=1.8, ls='--', zorder=4,
-            label='Theorem 1 (Poisson approx.)')
+            label='Theorem 3.1 (Poisson approx.)')
 
     # Empirical points
     if emp_mu is not None and emp_det is not None:
@@ -196,9 +220,7 @@ def figure1(p, w, L, delta, depth, mu_c,
 
     ax.legend(loc='lower left', framealpha=0.9)
     fig.tight_layout()
-    fig.savefig(outpath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"  Saved → {outpath}")
+    save_figure(fig, outpath)
 
 
 # ── Figure 2: optimal w* and over-specification cost ─────────────────────────
@@ -247,7 +269,7 @@ def figure2(p, L, delta, depth, Q, n_avg, alpha,
 
     ax2.set_xlabel('Window length  $w$')
     ax2.set_ylabel('Required depth ratio  $T^*(w) / T^*(w^*)$')
-    ax2.set_title('Cost of over-specification (Theorem 3)')
+    ax2.set_title('Cost of over-specification (Theorem 3.4)')
     ax2.axhline(1.0, color='#aaa', lw=0.9, ls=':')
     ax2.legend(loc='upper left', framealpha=0.9)
 
@@ -257,9 +279,7 @@ def figure2(p, L, delta, depth, Q, n_avg, alpha,
         fontsize=12
     )
     fig.tight_layout()
-    fig.savefig(outpath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"  Saved → {outpath}")
+    save_figure(fig, outpath)
 
 
 # ── Figure 3: phase diagram (p, μ) ────────────────────────────────────────────
@@ -330,9 +350,7 @@ def figure3(w, L, delta, T_limits=None,
     ax.legend(handles=proxy, loc='upper left', framealpha=0.9,
               title='Depth contours', title_fontsize=9)
     fig.tight_layout()
-    fig.savefig(outpath, bbox_inches='tight')
-    plt.close(fig)
-    print(f"  Saved → {outpath}")
+    save_figure(fig, outpath)
 
 
 # ── Load empirical data from CSV ──────────────────────────────────────────────
@@ -358,7 +376,7 @@ def main():
         description="Generate three paper figures",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument('--csv',          default='results.csv')
+    parser.add_argument('--csv',          default='data/results.csv')
     parser.add_argument('--no-empirical', action='store_true')
     parser.add_argument('--p',     type=float, default=1e-4)
     parser.add_argument('--w',     type=int,   default=24)
@@ -368,10 +386,9 @@ def main():
     parser.add_argument('--Q',     type=int,   default=5_000)
     parser.add_argument('--n_avg', type=int,   default=15_000)
     parser.add_argument('--alpha', type=float, default=1e-6)
-    parser.add_argument('--outdir',        default='/mnt/user-data/outputs')
+    parser.add_argument('--outdir',        default='figures')
     args = parser.parse_args()
 
-    import os
     os.makedirs(args.outdir, exist_ok=True)
     def out(name):
         return os.path.join(args.outdir, name)

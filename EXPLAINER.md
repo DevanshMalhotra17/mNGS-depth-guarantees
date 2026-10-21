@@ -15,11 +15,11 @@
 5. [Definition 1.1: The Three Tiers of Divergence](#5-definition-11-the-three-tiers)
 6. [Definition 1.2: What Makes a Read "Informative"?](#6-definition-12-informative-reads)
 7. [The Linear Recurrence: Exact Math Behind q](#7-the-linear-recurrence)
-8. [Theorem 1: How Deep Do We Need to Sequence?](#8-theorem-1-minimum-depth)
-9. [Theorem 2: The Hard Boundary — Critical Divergence](#9-theorem-2-critical-divergence)
-10. [Theorem 3: Choosing the Right Window Size](#10-theorem-3-optimal-window)
+8. [Theorem 1: How Deep Do We Need to Sequence?](#8-theorem-1-minimum-depth) — paper Theorem 3.1
+9. [Theorem 2: The Hard Boundary — Critical Divergence](#9-theorem-2-critical-divergence) — paper Theorem 3.3
+10. [Theorem 3: Choosing the Right Window Size](#10-theorem-3-optimal-window-size) — paper Theorem 3.4
 11. [Walk-Through: Real Numbers](#11-real-number-walk-through)
-12. [Why the Poisson Approximation Fails](#12-why-poisson-fails)
+12. [Why the Poisson Approximation Fails](#12-why-the-poisson-approximation-fails)
 13. [Glossary of Every Term Used](#13-glossary)
 
 ---
@@ -228,26 +228,25 @@ Case $w$: The first failure is at position $w$ (first $w-1$ letters match, the $
 
 **But why stop at case $w$?** Because if the first failure is at position $w+1$ or later, that means positions 1 through $w$ are ALL successes — that's already a run of $w$ successes, which is exactly what we're trying to avoid. So those cases contribute 0 to $P_n$.
 
-Adding up all the cases:
+Adding up all the cases, for $n \geq w$:
 
-$$P_n = \sum_{j=0}^{\min(n,w)-1} (1-\mu)^j \cdot \mu \cdot P_{n-j-1}$$
+$$P_n = \sum_{j=0}^{w-1} (1-\mu)^j \cdot \mu \cdot P_{n-j-1}, \qquad n \geq w$$
 
-**Base case:** $P_0 = 1$ (an empty sequence trivially has no run of $w$ successes).
+**Boundary condition:** $P_n = 1$ for every $n$ from $0$ to $w-1$.
 
-**Why "min(n,w)-1"?** Because if $n < w$, we can never have a run of $w$, so we sum over all possible first-failure positions (up to position $n$).
+$$P_n = 1 \qquad \text{for } 0 \leq n \leq w-1$$
+
+**Why all of $0$ through $w-1$, and not just $P_0 = 1$?** Because a run of $w$ consecutive successes simply does not fit in fewer than $w$ trials, so for any such $n$ the probability of having no run is exactly 1 — not just for the empty sequence. This is the single easiest thing to get wrong in the whole derivation, and getting it wrong is not a rounding error. If you set only $P_0 = 1$ and let the sum run from $j=0$ to $\min(n-1, w-1)$ for all $n \geq 1$, you get $P_1 = \mu$ instead of $P_1 = 1$, and every value after that inherits the mistake: at $\mu = 0.05$ you would compute $q = 0.949$ instead of the correct $0.986$, and at $\mu = 0.10$ you would compute $0.824$ instead of $0.744$ — wrong in both directions, so it does not even fail safe. (Paper Remark 2.5 works this through.)
+
+A useful sanity check on the recurrence itself: the coefficients sum to $\sum_{j=0}^{w-1}(1-\mu)^j \mu = 1 - (1-\mu)^w$, which is exactly the probability that the first $w$ trials are *not* all successes. That has to be true, because the $j$ cases above are precisely the ways the first $w$ trials can fail to be all-successes.
 
 ### Worked example with small numbers
 
 Let's compute $P_n$ for $w = 2$ (we want no run of 2 consecutive matches), $\mu = 0.2$, so $1-\mu = 0.8$.
 
-$P_0 = 1$ (empty sequence, vacuously true)
+$P_0 = 1$ and $P_1 = 1$: both come straight from the boundary condition, since $n = 0$ and $n = 1$ are both below $w = 2$ and you cannot fit a run of 2 into fewer than 2 trials. Notice what the broken version would give here: summing $j=0$ alone yields $P_1 = 0.2$, which is already visibly wrong — one coin flip cannot produce two consecutive heads, so the answer has to be 1.
 
-$P_1$: Only 1 letter, can't have a run of 2.
-- $j=0$: $(0.8)^0 \cdot 0.2 \cdot P_0 = 0.2$
-- Since $n=1 < w=2$: add $(0.8)^1 = 0.8$ (all-matches case, safe since $n < w$)
-- $P_1 = 0.2 + 0.8 = 1.0$ ✓ (as expected — impossible to have run of 2 in 1 trial)
-
-$P_2$: Two letters, can have a run of 2 only if both match.
+$P_2$: now $n \geq w$, so the recurrence applies. Two letters, which can have a run of 2 only if both match.
 - $j=0$: $0.2 \cdot P_1 = 0.2 \cdot 1.0 = 0.20$
 - $j=1$: $0.8 \cdot 0.2 \cdot P_0 = 0.8 \cdot 0.2 \cdot 1 = 0.16$
 - $P_2 = 0.20 + 0.16 = 0.36$
@@ -278,6 +277,8 @@ $$q(w, L, \mu) = 1 - P_L$$
 ---
 
 ## 8. Theorem 1: Minimum Depth
+
+*This is **Theorem 3.1** in the paper (`proofs/paper.tex`), Eq. 6. The "Theorem 1/2/3" numbering used in this explainer is local to this document; the paper numbers theorems by section.*
 
 ### The setup
 
@@ -347,6 +348,8 @@ This proves the corollary. It tells us something intuitive: harder detection sit
 
 ## 9. Theorem 2: Critical Divergence
 
+*This is **Theorem 3.3** in the paper, Eq. 7.*
+
 ### What is $\mu_c$?
 
 The critical divergence $\mu_c$ is the **maximum amount of divergence** a pathogen can have before it becomes impossible to guarantee detection with any practical sequencing budget $T_{\max}$.
@@ -368,9 +371,17 @@ From Theorem 1, $T^{\ast} \leq T_{\max}$ iff:
 
 $$\frac{\ln(1/\delta)}{-\ln(1-pq)} \leq T_{\max}$$
 
-Rearranging: $q \geq \frac{\ln(1/\delta)}{T_{\max} \cdot (-\ln(1-pq))}$. Using the approximation $-\ln(1-pq) \approx pq$:
+Rearranging (the $\lceil \cdot \rceil$ only ever rounds up, so dropping it is the conservative direction):
 
-$$p \cdot q(w, L, \mu_c) = \frac{\ln(1/\delta)}{T_{\max}}$$
+$$-\ln(1-pq) \geq \frac{\ln(1/\delta)}{T_{\max}} \iff 1 - pq \leq \delta^{1/T_{\max}} \iff p \cdot q \geq 1 - \delta^{1/T_{\max}}$$
+
+The critical divergence $\mu_c$ is the value of $\mu$ where that inequality becomes an equality:
+
+$$p \cdot q(w, L, \mu_c) = 1 - \delta^{1/T_{\max}}$$
+
+Using the approximation $1 - \delta^{1/T_{\max}} \approx \ln(1/\delta)/T_{\max}$, valid when $T_{\max}$ is large (here $1 - 0.01^{1/100000} = 4.60506 \times 10^{-5}$ against $\ln(100)/100{,}000 = 4.60517 \times 10^{-5}$, a difference of 0.002%), this is the more memorable form:
+
+$$p \cdot q(w, L, \mu_c) \approx \frac{\ln(1/\delta)}{T_{\max}}$$
 
 This equation says: $\mu_c$ is the divergence at which the "effective detection rate per read" $p \cdot q$ exactly equals the critical threshold $\ln(1/\delta)/T_{\max}$.
 
@@ -404,6 +415,8 @@ This means: if a pathogen differs from the nearest reference by more than 13.49%
 ---
 
 ## 10. Theorem 3: Optimal Window Size
+
+*This is **Theorem 3.4** in the paper, Eq. 9.*
 
 ### The tradeoff
 
@@ -445,11 +458,22 @@ We want to minimize $T^{\ast}$ (use as little sequencing as possible) while sati
 
 From the Corollary of Theorem 1: $T^{\ast}$ is **strictly increasing in $w$** (larger window = more sequencing needed). So among all valid $w \geq w^{\ast}$, the minimum $T^{\ast}$ is achieved at the smallest valid $w$, which is exactly $w^{\ast}$.
 
-Any $w > w^{\ast}$ gives the same false-positive protection but requires unnecessarily more sequencing. Any $w < w^{\ast}$ would cause too many false positives.
+Any $w > w^{\ast}$ gives *even stronger* false-positive protection — $P_{\mathrm{FP}}$ keeps falling by a factor of 4 per extra base — but you have already met the target $\alpha$ at $w^{\ast}$, so that extra protection buys you nothing you asked for while costing real sequencing depth. Any $w < w^{\ast}$ would cause too many false positives.
 
 ### The sharpening tradeoff
 
-The cost of over-specifying $w$ gets worse as $\mu \to \mu_c$. At the detection boundary, $q(w^{\ast}, L, \mu_c)$ is at its minimum viable value. Using a larger $w$ drops $q$ to zero — the ratio $T^{\ast}(w^{\ast}+\Delta) / T^{\ast}(w^{\ast})$ grows without bound. In other words: the closer you are to the detection limit, the more critical it becomes to use exactly $w = w^{\ast}$ and not a larger value.
+The cost of over-specifying $w$ grows with $\mu$. For $w^{\ast} = 24$ and $\Delta = 10$, the ratio $T^{\ast}(w^{\ast}+\Delta) / T^{\ast}(w^{\ast})$ is about:
+
+| $\mu$ | Ratio |
+|---|---|
+| $0$ | 1.00 (no penalty at all — $q = 1$ for every $w \leq L$) |
+| $0.10$ | 2.33 |
+| $\mu_c = 0.1349$ | 3.93 |
+| $0.20$ | 9.71 |
+
+So at $\mu = 0$ the choice of $w$ is free, and by $\mu = 0.20$ a window 10 bases too long costs you nearly ten times the sequencing. Note that the ratio is **finite** at $\mu_c$ — it is 3.93, not unbounded. $\mu_c$ is a statement about your depth *budget* $T_{\max}$, not a point where $q$ collapses to zero; $q(24, 150, \mu_c) = 0.4605$, which is nowhere near zero. The ratio does grow without bound eventually, but only as $\mu \to 1$, far outside the regime anyone plans an assay in.
+
+The practical upshot: the closer you are to the detection limit, the more a too-long window costs you — but it costs you a knowable, finite multiple, which is exactly what makes it a design tradeoff rather than a cliff.
 
 ---
 
@@ -484,9 +508,17 @@ This makes sense: with $\mu = 0.0017$ (only 0.17% of letters mutated), almost ev
 
 ### Step 3: Compute $T^{\ast}$
 
-$$T^{\ast} = \left\lceil \frac{\ln(1/0.01)}{0.0001 \times 1.0} \right\rceil = \left\lceil \frac{\ln(100)}{0.0001} \right\rceil = \left\lceil \frac{4.605}{0.0001} \right\rceil = \lceil 46{,}052 \rceil = 46{,}052$$
+The exact formula uses $-\ln(1-pq)$ in the denominator:
 
-**Conclusion:** To guarantee detection of Omicron at 1% false-negative rate, with the given abundance and parameters, you need **46,052 reads** minimum.
+$$T^{\ast} = \left\lceil \frac{\ln(1/0.01)}{-\ln(1 - 0.0001 \times 1.0)} \right\rceil = \left\lceil \frac{4.60517}{1.00005 \times 10^{-4}} \right\rceil = \lceil 46{,}049.7 \rceil = 46{,}050$$
+
+It is tempting to simplify $-\ln(1-pq) \approx pq$, which gives
+
+$$\left\lceil \frac{\ln(100)}{0.0001} \right\rceil = \lceil 46{,}051.7 \rceil = 46{,}052$$
+
+— two reads higher. That approximation is always an *over*-estimate (since $-\ln(1-x) > x$), so it is safe to use, but the exact value is what the paper and the simulator report. The two differ by 0.004% here; the gap widens as $pq$ grows.
+
+**Conclusion:** To guarantee detection of Omicron at 1% false-negative rate, with the given abundance and parameters, you need **46,050 reads** minimum — matching the $\mu = 0$ row of paper Table 1, since $q \approx 1$ at this divergence.
 
 ### Step 4: Compute $\mu_c$
 
@@ -518,9 +550,18 @@ This approximation comes from treating the $L-w+1$ windows as **independent**. I
 
 The problem is that windows are **not independent**. Window 1 (positions 1–24) and Window 2 (positions 2–25) share 23 out of 24 letters. If window 1 is a match, window 2 is almost certainly also a match. They're highly correlated.
 
-The independence assumption only works well when $(1-\mu)^w$ is small — meaning most windows fail to match, and the rare matching windows don't "overlap" much. This happens when $\mu$ is large or $w$ is large.
+It is tempting to think the approximation is safe whenever $(1-\mu)^w$ is small, so that matching windows are rare. That is not what rescues it. The matching windows **clump**: a run of $m \ge w$ consecutive matching bases produces $m-w+1$ matching windows all at once, so the expected count $\lambda = (L-w+1)(1-\mu)^w$ counts one lucky run many times over — by a factor of roughly $1/\mu$. Shrinking $\lambda$ does not fix that. At $\mu = 0.30$, $\lambda \approx 0.024$ is tiny, and the approximation still overestimates $q$ by a factor of 3.2.
 
-For the clinically important low-$\mu$ regime (like $\mu = 0.05$ or $\mu = 0.12$), the approximation overestimates $q$ by up to 70%, which would dramatically underestimate the required sequencing depth. Using the approximation here would give doctors a false sense of security.
+What actually controls the error is $\mu$ itself. The overestimate is harmless at low divergence and gets worse as divergence rises:
+
+| $\mu$ | exact $q$ | Poisson $q$ | ratio |
+|---|---|---|---|
+| 0.05 | 0.986 | 1.000 | 1.01 |
+| 0.10 | 0.744 | 1.000 | 1.34 |
+| 0.12 | 0.580 | 0.997 | 1.72 |
+| 0.20 | 0.119 | 0.451 | 3.80 |
+
+So the danger zone is not the low-$\mu$ regime — there the approximation is fine — but the moderate-to-high divergence regime at and above $\mu \approx 0.10$, which is exactly where the detection guarantee is marginal. A lab using the Poisson formula at $\mu = 0.12$ would plan for 46,175 reads when 79,409 are needed, and would compute a critical divergence of 0.199 instead of the true 0.1349, treating a $\mu = 0.18$ pathogen as comfortably detectable when it actually needs 243,553 reads. That is a false sense of security precisely where it matters most.
 
 **This is why the exact linear recurrence is essential** — it correctly handles the correlation between overlapping windows.
 
