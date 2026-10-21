@@ -1,14 +1,15 @@
 # Minimum Sequencing Depth Guarantees for Reference-Based Detection of Divergent Pathogens in Clinical Metagenomic Sequencing
 
-**Author:** Devansh  
-**Competition:** STEM Research Competition 2026  
-**Status:** Preprint in preparation (arXiv submission pending)
+**Author:** Devansh Malhotra  
+**Status:** Preprint on Figshare — [doi.org/10.6084/m9.figshare.33668701](https://doi.org/10.6084/m9.figshare.33668701)
 
 ---
 
 ## Abstract
 
-I derive the first closed-form lower bound on sequencing depth that provably guarantees detection of a divergent pathogen in clinical metagenomic next-generation sequencing (mNGS), jointly as a function of pathogen relative abundance $p$, per-base genomic divergence $\mu$, classifier $w$-mer window length $w$, read length $L$, target false-negative probability $\delta$, and reference database size $Q$. Central to our analysis is the function $q(w, L, \mu)$ — the exact probability that a single read from a divergent pathogen produces at least one classifiable $w$-mer — derived via a linear recurrence on the longest-run distribution of Bernoulli trials. Our depth bound extends the Bernoulli limit-of-detection model of Eidenschink Brodersen et al. [1] by introducing the divergence dimension absent from their framework. I further derive the critical divergence $\mu_c$: the hard boundary beyond which no reference-based $w$-mer classifier can guarantee detection within any fixed sequencing budget. Finally, I prove that the optimal classifier window $w^{\ast}$ minimizing required depth subject to a false-positive rate constraint lies at the boundary of the false-positive feasibility region, with the cost of over-specification diverging as divergence approaches $\mu_c$. Results are validated empirically on real SARS-CoV-2 (Wuhan, Omicron), Influenza H3N2 HA, and H1N1 HA genomes.
+Clinical metagenomic next-generation sequencing (mNGS) enables rapid identification of infectious agents by matching sequenced DNA reads from patient samples against a curated reference database. This approach is particularly valuable in time-critical settings where conventional culture-based diagnosis is too slow, yet it is most likely to fail in precisely the scenarios of greatest clinical concern: when a pathogen has diverged substantially from any entry in the reference database, as occurs with emerging variants, cross-species spillovers, and novel outbreak strains. In the absence of a principled mathematical framework, the minimum sequencing depth required to guarantee detection of a divergent pathogen remains determined empirically on a per-pathogen, per-assay basis, providing no general design criterion.
+
+Here, a formal probabilistic model of reference-based $w$-mer classification is developed, and three theorems are established. A minimum sequencing depth bound $T^{\ast}(p, \mu, w, L, \delta)$ is derived as an explicit closed-form function of pathogen abundance $p$, per-base genomic divergence $\mu$, classifier window length $w$, read length $L$, and target false-negative rate $\delta$. The derivation rests on the exact probability $q(w, L, \mu)$ that a single read from a divergent pathogen contains at least one classifiable $w$-mer, computed via a linear recurrence on the run-length distribution of Bernoulli trials. The critical divergence $\mu_c$ (the maximum divergence at which detection can be guaranteed within a practical sequencing budget) is proved unique and computable by bisection on the exact recurrence, providing a quantitative boundary between classifiable and effectively novel pathogens. The optimal classifier window length $w^{\ast} = \lceil \log_4(Q\, n_{\mathrm{avg}} / \alpha) \rceil$ is shown to minimize required depth subject to a false-positive rate constraint, and the depth penalty for a longer window grows rapidly with divergence: a window 10 bases longer than $w^{\ast}$ requires $2.3\times$ more reads at $\mu = 0.10$ and $3.9\times$ more at $\mu_c$. A methodologically significant finding is that the Poisson approximation commonly used to estimate classifiable-read probability overestimates $q(w, L, \mu)$ by 72% at $\mu = 0.12$ alone, with the overestimate exceeding 100% as $\mu$ approaches $\mu_c$ from below, making the exact recurrence essential for conservative depth planning. The same approximation also overestimates the critical divergence itself (0.199 versus the exact 0.1349 at $T_{\max} = 10^5$). All results are validated by simulation on real SARS-CoV-2 (Wuhan reference), Influenza A H3N2 HA, and H1N1 HA genomes across biologically motivated divergence scenarios, with theory–empirical gaps of at most 0.062 across all experiments (0.033 on the real genomes). The framework extends Eidenschink Brodersen et al. [1] by introducing the divergence dimension absent from their model and provides the first principled basis for sequencing depth selection in mNGS assay design when pathogen identity and divergence are uncertain.
 
 > 📖 New to k-mer classification, divergence, or the math notation here?
 > See [EXPLAINER.md](EXPLAINER.md) for a full plain-language walkthrough
@@ -23,6 +24,7 @@ I derive the first closed-form lower bound on sequencing depth that provably gua
 ├── code/
 │   ├── simulator.py          # Component 1: Read simulator (validates Theorems 1–3)
 │   ├── plot_figures.py       # Generates all three paper figures
+│   ├── shared_genome_expectation.py  # Expected detection when all reads in a trial share one mutated genome (paper Sec. 5.4)
 │   └── requirements.txt
 ├── proofs/
 │   └── paper.tex             # Full LaTeX source with formal proofs
@@ -55,6 +57,9 @@ python code/simulator.py --genome data/sars_cov2_wuhan.fasta \
 
 # Generate all three paper figures
 python code/plot_figures.py --csv data/results.csv
+
+# Reproduce the shared-genome numbers in paper Section 5.4
+python code/shared_genome_expectation.py
 ```
 
 ---
@@ -101,13 +106,13 @@ $$
 P_n = \sum_{j=0}^{\min(n,w)-1} (1-\mu)^j \cdot \mu \cdot P_{n-j-1}, \qquad n \geq 1, \quad P_0 = 1
 $$
 
-The **Poisson approximation** — valid only when $(L-w+1)(1-\mu)^w \ll 1$ (cf. [3] for related k-mer frequency approximations):
+The **Poisson approximation** — which treats the $L-w+1$ windows as independent (cf. [3] for related k-mer frequency approximations) and is used here only for comparison:
 
 $$
 q(w, L, \mu) \approx 1 - \exp\bigl(-(L-w+1)(1-\mu)^{w}\bigr)
 $$
 
-> **Important:** The Poisson approximation overestimates $q$ by up to **70%** when $\mu$ is small (see Figure 1). The exact recurrence is required.
+> **Important:** The Poisson approximation overestimates $q$ by **72%** at $\mu = 0.12$ and by more than 100% as $\mu$ approaches $\mu_c$ (ratio $1.34$ at $\mu = 0.10$, $3.8$ at $\mu = 0.20$; negligible for $\mu \leq 0.05$). Matching windows occur in overlapping clusters of mean size roughly $1/\mu$, which the Poisson count ignores (see Figure 1). The exact recurrence is required.
 
 ### Definition 1.3 — Detection Event
 
@@ -122,10 +127,10 @@ Given $T$ reads, the false-negative event $\overline{\mathcal{E}}$ occurs if no 
 **Statement.** The minimum sequencing depth guaranteeing $\delta$-detection is:
 
 $$
-T^{\ast}(p, \mu, w, L, \delta) = \left\lceil \frac{\ln(1/\delta)}{-\ln\bigl(1 - p \cdot q(w,L,\mu)\bigr)} \right\rceil \geq \left\lceil \frac{\ln(1/\delta)}{p \cdot q(w,L,\mu)} \right\rceil
+T^{\ast}(p, \mu, w, L, \delta) = \left\lceil \frac{\ln(1/\delta)}{-\ln\bigl(1 - p \cdot q(w,L,\mu)\bigr)} \right\rceil \leq \left\lceil \frac{\ln(1/\delta)}{p \cdot q(w,L,\mu)} \right\rceil
 $$
 
-The right-hand inequality is the approximation for small $pq$, tight within a factor of 2 whenever $pq \leq 0.5$.
+The right-hand expression is the small-$pq$ approximation: an **upper** bound on $T^{\ast}$, tight within a factor of 2 (up to rounding) whenever $pq \leq 0.5$.
 
 **Proof.**
 Each read is independently a pathogen read with probability $p$, and each pathogen read is independently informative with probability $q = q(w,L,\mu)$. Therefore each read is an informative pathogen read with probability $pq$, independently across reads.
@@ -138,7 +143,7 @@ Setting $\Pr(\overline{\mathcal{E}}) \leq \delta$ and solving for $T$:
 
 $$(1-pq)^T \leq \delta \iff T \ln(1-pq) \leq \ln\delta \iff T \geq \frac{\ln(1/\delta)}{-\ln(1-pq)}$$
 
-Taking the ceiling gives the exact integer minimum. The inequality $-\ln(1-x) \geq x$ (equality only at $x=0$) gives $-\ln(1-pq) \geq pq$, establishing the right-hand approximation. The factor-of-2 bound follows from $-\ln(1-x) \leq 2x$ for $x \leq 1/2$.
+Taking the ceiling gives the exact integer minimum. The inequality $-\ln(1-x) \geq x$ (equality only at $x=0$) gives $-\ln(1-pq) \geq pq$, hence $\ln(1/\delta)/(-\ln(1-pq)) \leq \ln(1/\delta)/(pq)$, which gives the right-hand bound. The factor-of-2 claim follows from $-\ln(1-x) \leq 2x$ for $x \leq 1/2$.
 
 **Corollary (Monotonicity).** $T^{\ast}$ is strictly increasing in $\mu$ and strictly increasing in $w$, for all $\mu \in (0,1)$, $w \geq 1$, $L > w$.
 
@@ -148,26 +153,24 @@ Taking the ceiling gives the exact integer minimum. The inequality $-\ln(1-x) \g
 
 ### Theorem 2 — Critical Divergence $\mu_c$
 
-**Statement.** Fix $w, L, p, \delta$, and a practical depth ceiling $T_{\max}$. Define:
+**Statement.** Fix $w, L, p, \delta$ and an integer depth ceiling $T_{\max}$ with $p > 1-\delta^{1/T_{\max}}$ (so that a perfectly matching pathogen is detectable within $T_{\max}$). Let
+
+$$\theta = \frac{1-\delta^{1/T_{\max}}}{p} \in (0,1),$$
+
+which agrees with $\ln(1/\delta)/(pT_{\max})$ to relative error $\ln(1/\delta)/(2T_{\max})$. Define:
 
 $$\mu_c(w, L, p, \delta, T_{\max}) = \sup\bigl\lbrace \mu \in [0,1] : T^{\ast}(p,\mu,w,L,\delta) \leq T_{\max} \bigr\rbrace$$
 
-$\mu_c$ is the unique solution to:
-
-$$
-p \cdot q(w, L, \mu_c) = \frac{\ln(1/\delta)}{T_{\max}}
-$$
-
-For $\mu > \mu_c$, no reference-based $w$-mer classifier achieves $\delta$-detection within $T_{\max}$ reads (Tier 3).
-
-The closed-form approximation using (2):
-
-$$
-\mu_c \approx 1 - \left(\frac{-\ln\bigl(1 - \frac{\ln(1/\delta)}{p \cdot T_{\max}}\bigr)}{L - w + 1}\right)^{1/w}
-$$
+Then $\mu_c$ is the unique solution of $q(w, L, \mu_c) = \theta$, where $q$ is the **exact** informative-read probability, and $T^{\ast} \leq T_{\max}$ if and only if $\mu \leq \mu_c$. For $\mu > \mu_c$, no reference-based $w$-mer classifier achieves $\delta$-detection within $T_{\max}$ reads (Tier 3).
 
 **Proof.**
-By Theorem 1, $T^{\ast} \leq T_{\max}$ iff $q(w,L,\mu) \geq \ln(1/\delta)/(p\cdot T_{\max})$. The function $q(w,L,\cdot)$ is continuous and strictly decreasing in $\mu$ (by the Corollary), with $q(w,L,0) > 0$ and $q(w,L,1) = 0$. The intermediate value theorem guarantees a unique $\mu_c$ satisfying (4). For $\mu > \mu_c$, I have $q < \ln(1/\delta)/(p\cdot T_{\max})$, so $T^{\ast} > T_{\max}$.
+Since $T_{\max}$ is an integer, $T^{\ast} \leq T_{\max}$ iff $\ln(1/\delta)/(-\ln(1-pq)) \leq T_{\max}$ iff $1-pq \leq \delta^{1/T_{\max}}$ iff $q \geq \theta$. The function $q(w,L,\cdot)$ is a polynomial in $\mu$ (by the recurrence), hence continuous on $[0,1]$, with $q(w,L,0) = 1 > \theta$ and $q(w,L,1) = 0 < \theta$. It is strictly decreasing on $(0,1)$ (by the Corollary), hence on $[0,1]$ by continuity. The intermediate value theorem and strict monotonicity give a unique $\mu_c$ with $q(w,L,\mu_c) = \theta$, and $q \geq \theta$ exactly when $\mu \leq \mu_c$.
+
+**Computing $\mu_c$.** Solve $q(w,L,\mu_c) = \theta$ by bisection ($O(wL)$ per evaluation of $q$). Substituting the Poisson approximation gives a closed form,
+
+$$\mu_c^{\mathrm{Pois}} = 1 - \left(\frac{-\ln(1-\theta)}{L-w+1}\right)^{1/w},$$
+
+but it overestimates $\mu_c$ because the Poisson approximation overestimates $q$. For $p = 10^{-4}$, $w = 24$, $L = 150$, $\delta = 0.01$, $T_{\max} = 10^5$ the exact value is $\mu_c = 0.1349$, while the closed form gives $0.199$ (about 48% too high), which would misclassify $\mu = 0.15$ and $\mu = 0.18$ as Tier 2. All $\mu_c$ values reported here and in the paper are exact.
 
 **Remark.** $\mu_c$ is not a fixed biological constant — it depends on all detection parameters. Increasing read length $L$ raises $\mu_c$ for all other fixed parameters: a formal justification for the practical preference for long-read platforms in novel-pathogen detection.
 
@@ -187,7 +190,7 @@ $$
 w^{\ast} = \left\lceil \log_4\left(\frac{Q \cdot n_{\mathrm{avg}}}{\alpha}\right) \right\rceil
 $$
 
-For $\mu > 0$, using any $w > w^{\ast}$ strictly increases required sequencing depth, with the cost of over-specification diverging as $\mu \to \mu_c$.
+For $\mu > 0$, using any $w > w^{\ast}$ strictly increases required sequencing depth, and the penalty grows rapidly with $\mu$.
 
 **Proof.**
 By the Corollary to Theorem 1, $T^{\ast}(w)$ is strictly increasing in $w$. Therefore the minimum over the feasible set $\mathcal{W} = \lbrace w \in \mathbb{Z}^+ : P_{\mathrm{FP}}(w) \leq \alpha \rbrace$ is attained at $w^{\dagger} = \min \mathcal{W}$.
@@ -200,13 +203,9 @@ $$
 
 The smallest integer satisfying this is $w^{\dagger} = \lceil \log_4(Q \cdot n_{\mathrm{avg}} / \alpha) \rceil = w^{\ast}$.
 
-For the divergence claim: at $w = w^{\ast} + \Delta$ with $\Delta \geq 1$:
+**Cost of over-specification.** For $w = w^{\ast} + \Delta$ with $\Delta \geq 1$, strict monotonicity in $w$ gives $T^{\ast}(w^{\ast}+\Delta) > T^{\ast}(w^{\ast})$ for every $\mu > 0$. When $pq \ll 1$ the ratio is approximately $q(w^{\ast}, L, \mu)/q(w^{\ast}+\Delta, L, \mu)$; for $w^{\ast} = 24$, $\Delta = 10$ it is $2.3$ at $\mu = 0.10$, $3.9$ at $\mu_c = 0.1349$, and $9.7$ at $\mu = 0.20$.
 
-$$\frac{T^{\ast}(w^{\ast}+\Delta)}{T^{\ast}(w^{\ast})} = \frac{q(w^{\ast}, L, \mu)}{q(w^{\ast}+\Delta, L, \mu)} \xrightarrow{\mu \to \mu_c} \infty$$
-
-since $q(w^{\ast}, L, \mu_c) = \ln(1/\delta)/(p\cdot T_{\max}) > 0$ while $q(w^{\ast}+\Delta, L, \mu_c) \to 0$ strictly faster by strict monotonicity in $w$.
-
-**Remark (Tradeoff sharpening under divergence).** At $\mu = 0$, $q(w,L,0) \approx 1$ for $w \ll L$, so $T^{\ast}$ is nearly independent of $w$ and any $w \geq w^{\ast}$ is acceptable. For $\mu > 0$, the penalty for choosing $w > w^{\ast}$ is largest precisely when divergence is highest — when correct window choice matters most.
+**Remark (Tradeoff sharpening under divergence).** At $\mu = 0$, $q(w,L,0) = 1$ for all $w \leq L$, so $T^{\ast}$ is independent of $w$ and any $w \geq w^{\ast}$ is acceptable. For $\mu > 0$, $T^{\ast}$ grows strictly in $w$ beyond $w^{\ast}$ and the numerical penalty grows rapidly with $\mu$ — when correct window choice matters most.
 
 ---
 
@@ -237,11 +236,13 @@ At $p = 10^{-4}$, $w = 24$, $L = 150$, $\delta = 0.01$, $T_{\max} = 100{,}000$: 
 
 | Parameter set | $T^{\ast}$ (theory) | Det. rate (emp.) |
 |---|---|---|
-| $\mu = 0.00$ (Tier 1) | 46,052 | 1.0000 |
-| $\mu = 0.05$ (Tier 2) | 46,803 | 1.0000 |
-| $\mu = 0.12$ (Tier 2, near boundary) | 79,409 | 0.9900 |
-| $\mu = 0.15$ (Tier 3) | 130,987 | 0.9800 |
-| $\mu = 0.20$ (Tier 3) | 387,793 | 0.8000 |
+| $\mu = 0.00$ (Tier 1) | 46,050 | 1.0000 |
+| $\mu = 0.05$ (Tier 2) | 46,705 | 1.0000 |
+| $\mu = 0.12$ (Tier 2, near boundary) | 79,409 | 0.9967 |
+| $\mu = 0.15$ (Tier 3) | 130,987 | 0.9667 |
+| $\mu = 0.20$ (Tier 3) | 387,793 | 0.6333 |
+
+Empirical rates: synthetic 5,000 bp genome, 300 trials per row, seed 42 (paper Table 1).
 
 ---
 
@@ -259,7 +260,7 @@ Reference genomes were retrieved from Nextstrain [5] and NCBI. Divergence values
 | H3N2 HA: 5-year drift | CY163680 [5] | 1,737 | 0.0500 | 0.98598 | 0.9999 | 1.0000 | 0.000 |
 | H3N2 vs H1N1 HA (cross-subtype) | CY121680 [5] | 1,752 | 0.3000 | 0.00742 | 0.072 | 0.075 | 0.004 |
 
-Maximum theory–empirical gap: **0.033** across all scenarios.
+Maximum theory–empirical gap on the real genomes: **0.033**. The largest gap anywhere in the paper is 0.062 (synthetic genome, $\mu = 0.20$, Table 1); gaps at $\mu \geq 0.18$ are mostly the shared-genome effect described in Section 5.4 of the paper.
 
 ---
 
@@ -269,7 +270,7 @@ Maximum theory–empirical gap: **0.033** across all scenarios.
 
 ![Figure 1](figures/fig1.png)
 
-Exact-recurrence theory (blue) matches empirical rate to within 0.03 across all $\mu$. Poisson approximation (red dashed) diverges by up to 70% for $\mu < 0.12$. $\mu_c = 0.1349$ (vertical dashed line) correctly predicts the detection boundary.
+Exact-recurrence theory (blue) tracks the empirical rate closely for $\mu \leq 0.15$; at $\mu = 0.18$–$0.20$ empirical detection falls modestly below theory (largest gap 0.062 in the paper's Table 1), as expected when all reads in a trial come from one mutated genome (paper Section 5.4). The Poisson approximation (red dashed) overestimates detection once $\mu$ is moderate: a 72% overestimate of $q$ at $\mu = 0.12$, growing to $3.8\times$ at $\mu = 0.20$. $\mu_c = 0.1349$ (vertical dashed line) marks the Tier 2 / Tier 3 boundary at $T_{\max} = 10^5$.
 
 ### Figure 2 — Optimal $w^{\ast}$ and Cost of Over-Specification
 
@@ -290,7 +291,7 @@ Heatmap of $\log_{10} T^{\ast}(p, \mu)$ over the biologically relevant parameter
 1. $T^{\ast}(p, \mu, w, L, \delta)$ — first closed-form depth bound incorporating divergence
 2. $\mu_c$ — first quantitative definition of the Tier 2 / Tier 3 boundary
 3. $w^{\ast} = 24$ proved, not just empirical — first formal derivation of the optimal window
-4. Poisson approximation failure — overestimates $q$ by up to 70% when $\mu$ is small; exact recurrence is necessary
+4. Poisson approximation failure — overestimates $q$ by 72% at $\mu = 0.12$ and by more than 100% near $\mu_c$, and overestimates $\mu_c$ itself ($0.199$ vs. exact $0.1349$); exact recurrence is necessary
 
 ---
 
@@ -299,7 +300,7 @@ Heatmap of $\log_{10} T^{\ast}(p, \mu)$ over the biologically relevant parameter
 | Prior work | What it covers | Gap addressed by this paper |
 |---|---|---|
 | Eidenschink Brodersen et al. (2020) [1] | $T \geq f(p, N, \delta)$ via Bernoulli | No divergence $\mu$; treats all reads as equally informative |
-| Hera, Pierce-Ward, Koslicki (2025) [3] | k-mer statistics under mutation | For *estimating* divergence, not guaranteeing detection |
+| Hera, Pierce-Ward, Koslicki (2023) [3] | k-mer statistics under mutation | For *estimating* divergence, not guaranteeing detection |
 | Lander & Waterman (1988) [4] | Physical genome coverage for assembly | Not about classifier-based detection |
 | Wood, Lu & Langmead (Kraken2, 2019) [2] | Empirical sensitivity per organism | No analytical false-negative bound |
 | **This work** | $T^{\ast}(p, \mu, w, L, \delta)$ + $\mu_c$ + $w^{\ast}$ | Fills all three gaps simultaneously |
@@ -309,6 +310,7 @@ Heatmap of $\log_{10} T^{\ast}(p, \mu)$ over the biologically relevant parameter
 ## Limitations
 
 - **Independent substitution model:** Real divergence includes insertions, deletions, and recombination.
+- **Read independence:** Theorem 1 treats pathogen reads as independent, but all pathogen reads in a sample derive from one mutated genome, so expected detection is slightly below theory (Jensen's inequality), mostly for short genomes. See paper Section 5.4 and `code/shared_genome_expectation.py`.
 - **Uniform read sampling:** GC bias and amplification artifacts cause non-uniform coverage.
 - **Sequencing errors:** Can be incorporated by replacing $\mu$ with $\mu_{\mathrm{eff}} = \mu + e - \mu e$ where $e$ is per-base error rate.
 - **Tier 3 scope:** Reference-free detection of truly novel pathogens ($\mu > \mu_c$) is explicitly out of scope.
@@ -318,9 +320,9 @@ Heatmap of $\log_{10} T^{\ast}(p, \mu)$ over the biologically relevant parameter
 ## Citation
 
 ```
-Devansh (2026). Minimum Sequencing Depth Guarantees for Reference-Based Detection
-of Divergent Pathogens in Clinical Metagenomic Sequencing.
-arXiv preprint [in preparation].
+Malhotra, D. (2026). Minimum Sequencing Depth Guarantees for Reference-Based
+Detection of Divergent Pathogens in Clinical Metagenomic Sequencing.
+Figshare preprint. https://doi.org/10.6084/m9.figshare.33668701
 ```
 
 ---
