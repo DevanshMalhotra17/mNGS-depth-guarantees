@@ -7,434 +7,988 @@
 \usepackage{microtype}
 \usepackage{booktabs}
 \usepackage{xcolor}
-\hypersetup{colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black}
+\hypersetup{colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black, urlcolor=blue!60!black}
 
-% ── Theorem environments ──────────────────────────────────────────────────────
+% ── Theorem environments (numbering matches the August 31 version) ───────────
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 \newtheorem{remark}[definition]{Remark}
 
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}[section]
-\newtheorem{proposition}[theorem]{Proposition}
 \newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{lemma}[theorem]{Lemma}
 
 % ── Macros ───────────────────────────────────────────────────────────────────
 \newcommand{\Tstar}{T^{*}}
 \newcommand{\wstar}{w^{*}}
 \newcommand{\muc}{\mu_{c}}
-\newcommand{\qfn}{q(w,L,\mu)}
-\newcommand{\Pn}{P_{n}(w,\,1-\mu)}
+\newcommand{\Tmax}{T_{\max}}
 \newcommand{\ceil}[1]{\left\lceil #1 \right\rceil}
-\newcommand{\db}{\mathcal{D}}
-\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
 
-% ─────────────────────────────────────────────────────────────────────────────
-\title{Minimum Sequencing Depth Guarantees for\\
+\title{\vspace{-2.4cm}Minimum Sequencing Depth Guarantees for\\
        Reference-Based Detection of Divergent Pathogens\\
        in Clinical Metagenomic Sequencing}
-\author{Devansh}
-\date{\today}
-% ─────────────────────────────────────────────────────────────────────────────
+\author{Devansh Malhotra}
+\date{August 31, 2026}
 
 \begin{document}
 \maketitle
+\vspace{-0.6cm}
 
 % ── Abstract ─────────────────────────────────────────────────────────────────
 \begin{abstract}
-We derive the first closed-form lower bound on sequencing depth that
-provably guarantees detection of a divergent pathogen in clinical
-metagenomic next-generation sequencing (mNGS), jointly as a function
-of pathogen relative abundance~$p$, per-base genomic divergence from
-the nearest reference~$\mu$, classifier $w$-mer window length~$w$,
-read length~$L$, target false-negative probability~$\delta$, and
-reference database size~$Q$.
-Central to our analysis is the function $\qfn$, giving the
-\emph{exact} probability that a single read from a divergent pathogen
-produces at least one classifiable $w$-mer match, derived via a
-linear recurrence on the longest-run distribution of Bernoulli
-trials---a classical combinatorial object appearing here in a
-bioinformatics context for the first time.
-We further derive the critical divergence~$\muc$: the hard boundary
-beyond which no reference-based $w$-mer classifier can guarantee
-detection within any fixed sequencing budget, formally separating
-detectable from effectively novel pathogens.
-Finally, we prove that the optimal classifier window length~$\wstar$
-minimizing required depth subject to a false-positive rate
-constraint---a sensitivity-specificity tradeoff that grows more acute
-as divergence increases---lies at the boundary of the false-positive
-feasibility region and is given by an explicit formula.
-Our results extend Eidenschink~Brodersen et~al.\ (2020) by introducing
-the divergence dimension absent from their model, and provide the
-first formal justification for choosing classifier window length from
-a detection guarantee rather than empirical benchmarking alone.
+\small
+Clinical metagenomic next-generation sequencing (mNGS) enables rapid
+identification of infectious agents by matching sequenced DNA reads from
+patient samples against a curated reference database. This approach is
+particularly valuable in time-critical settings where conventional
+culture-based diagnosis is too slow, yet it is most likely to fail in
+precisely the scenarios of greatest clinical concern: when a pathogen has
+diverged substantially from any entry in the reference database, as occurs
+with emerging variants, cross-species spillovers, and novel outbreak
+strains. In the absence of a principled mathematical framework, the minimum
+sequencing depth required to guarantee detection of a divergent pathogen
+remains determined empirically on a per-pathogen, per-assay basis, providing
+no general design criterion.
+
+Here, a formal probabilistic model of reference-based $w$-mer classification
+is developed and three theorems are established. A minimum sequencing depth
+bound $T^{*}(p,\mu,w,L,\delta)$ is derived as an explicit closed-form
+function of pathogen abundance $p$, per-base genomic divergence $\mu$,
+classifier window length $w$, read length $L$, and target false-negative
+rate $\delta$. The derivation rests on the exact probability $q(w,L,\mu)$
+that a single read from a divergent pathogen contains at least one
+classifiable $w$-mer, computed via a linear recurrence on the run-length
+distribution of Bernoulli trials. The critical divergence $\mu_c$ --- the
+maximum divergence at which detection can be guaranteed within a practical
+sequencing budget --- is proved unique and computable by bisection on the
+exact recurrence, providing a quantitative boundary between classifiable and
+effectively novel pathogens. The optimal classifier window length
+$w^{*}=\lceil\log_4(Q\,n_{\mathrm{avg}}/\alpha)\rceil$ is shown to minimize
+required depth subject to a false-positive rate constraint, and the depth
+penalty for a longer window grows rapidly with divergence: a window 10
+bases longer than $w^{*}$ requires $2.3\times$ more reads at $\mu=0.10$ and
+$3.9\times$ more at $\mu_c$. A methodologically significant finding is that
+the Poisson approximation commonly used to estimate classifiable-read
+probability overestimates $q(w,L,\mu)$ by 72\% at $\mu=0.12$ alone, with the
+overestimate exceeding 100\% as $\mu$ approaches $\mu_c$ from below, making
+the exact recurrence essential for conservative depth planning. The same
+approximation also overestimates the critical divergence itself ($0.199$
+versus the exact $0.1349$ at $T_{\max}=10^5$). All results are validated by
+simulation on real SARS-CoV-2 (Wuhan reference), Influenza A H3N2 HA, and
+H1N1 HA genomes across biologically motivated divergence scenarios, with
+theory--empirical gaps of at most $0.062$ across all experiments ($0.033$ on
+the real genomes). The framework extends Eidenschink Brodersen et
+al.\ (2020) by introducing the divergence dimension absent from their model
+and provides the first principled basis for sequencing depth selection in
+mNGS assay design when pathogen identity and divergence are uncertain.
 \end{abstract}
 
+\newpage
 \tableofcontents
 \newpage
 
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Model and Definitions}
-% ─────────────────────────────────────────────────────────────────────────────
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Introduction}
 
-We model a clinical mNGS experiment as follows.
-A patient sample contains genomic material from host and microbial
-sources.
-A pathogen of interest $\mathcal{P}$ is present at \emph{relative
-abundance} $p\in(0,1)$: a fraction~$p$ of all sequenced reads
-originate from~$\mathcal{P}$.
-The pathogen genome has length $N$ base pairs.
-The reference database $\db$ contains $Q$ sequences of average
-length~$n_{\mathrm{avg}}$ base pairs; the nearest reference
-to~$\mathcal{P}$ in~$\db$ diverges from the true genome at per-base
-rate~$\mu$ under an \emph{independent} substitution model
-(i.e., each base independently disagrees with the reference with
-probability~$\mu$).
+\subsection{The Clinical Problem}
+
+Sepsis --- the life-threatening dysregulation of the immune response
+triggered by infection --- kills an estimated 11 million people per year
+worldwide~\cite{who2024}. Its fatality rate rises by roughly 7\% for every
+hour that passes before the correct treatment begins~\cite{kumar2006}, which
+places diagnostic speed at the center of patient outcomes. The standard
+clinical workflow for identifying the causative pathogen is microbiological
+culture: a sample of blood, cerebrospinal fluid, or other tissue is
+incubated on a growth medium until the pathogen reproduces in sufficient
+quantity to be identified. This process typically requires 24--72 hours, by
+which time critical treatment windows may already have closed.
+
+Metagenomic next-generation sequencing (mNGS) offers a fundamentally
+different approach. Rather than culturing the organism, mNGS sequences all
+DNA molecules in a patient sample simultaneously --- human, bacterial,
+viral, and fungal --- and computationally separates them by comparison to a
+reference database. This process can be completed in under six
+hours~\cite{wilson2019}. Clinical studies have demonstrated mNGS's ability
+to detect pathogens missed by conventional testing, particularly in
+immunocompromised patients and in cases of neurological infection where
+standard cultures have low sensitivity~\cite{wilson2019}. The technology is
+increasingly deployed for exactly the most difficult diagnostic questions:
+rare organisms, unusual presentations, and suspected but unconfirmed
+pathogens.
+
+The central vulnerability of mNGS is also the context in which it is most
+needed. When a pathogen has diverged --- through natural mutation, antigenic
+drift, or in an early-pandemic scenario --- from any sequence currently in
+the reference database, the classifier may fail to recognize its reads. The
+pathogen is present in the sample; its DNA is being sequenced; but the
+algorithm does not flag it. This is not a failure of the sequencing machine.
+It is a failure of the matching logic, and it is principled and predictable:
+the classifier requires exact string matches at the nucleotide level, and
+sufficiently diverged sequences will not produce them.
+
+The question this paper addresses is: given a known or estimated level of
+divergence, how much sequencing is needed to guarantee detection? This
+question has no existing answer in the literature.
+
+\subsection{How mNGS Classification Works: the $k$-mer Pipeline}
+
+To understand why divergence causes failure and how to quantify it, we first
+need to understand the classification mechanism precisely.
+
+A DNA genome is a string over the four-letter alphabet $\{A,T,G,C\}$. A
+sequencing machine does not read the genome all at once; instead, it
+randomly samples millions of short fragments, called reads, each typically
+75--300 nucleotides (base pairs, bp) in length. The collection of all reads
+from one experiment is a random coverage of the original genome, weighted by
+the molecular abundance of each species in the sample.
+
+A $w$-mer (also called a $k$-mer) is a contiguous substring of length $w$.
+From a read of length $L$, one can extract $L-w+1$ overlapping $w$-mers by
+sliding a window of width $w$ across the read one position at a time. The
+classifier used in tools such as Kraken2~\cite{wood2019} maintains a hash
+table mapping every $w$-mer present in any reference genome to the lowest
+common ancestor (LCA) of the organisms that contain it. At query time, each
+read is decomposed into its $L-w+1$ $w$-mers. For each $w$-mer that exists
+in the hash table, the corresponding LCA annotation is recorded. The read is
+then assigned a species classification based on the majority LCA among its
+$w$-mers, using a vote-weighted scheme.
+
+The critical property of this design is that all matches are exact. A
+$w$-mer from the patient sample must be character-for-character identical to
+a $w$-mer in the database to be counted as a match. There is no fuzzy
+matching, no edit-distance tolerance, no alignment step. This makes the
+classifier extremely fast --- hash table lookups are $O(1)$ --- and
+extremely specific --- only true exact matches contribute --- but it is also
+the source of the divergence problem.
+
+\subsection{Why Divergence Causes Detection Failure}
+
+Pathogens mutate continuously. A substitution mutation is a point change:
+one nucleotide is replaced by a different one. If the pathogen's genome has
+diverged from the nearest reference at per-base rate $\mu$ (meaning each
+position has independently mutated with probability $\mu$), then any
+specific $w$-mer from the patient's sample survives as an exact match to the
+reference only if all $w$ positions within it are unmutated. Under the
+independent substitution model, the probability of this event is:
+\begin{equation}\label{eq:wmer}
+  \Pr(w\text{-mer is exact match}) = (1-\mu)^{w}.
+\end{equation}
+This probability decays exponentially with $w$. For $\mu=0.05$ (5\%
+divergence) and $w=24$: $(0.95)^{24}\approx 0.292$. About 71\% of all
+$w$-mers from this pathogen would fail to match, meaning the classifier
+receives only a thinned signal. At $\mu=0.15$ and $w=24$:
+$(0.85)^{24}\approx 0.020$. Now 98\% of $w$-mers are invisible to the
+classifier.
+
+A read of length $L$ contains $L-w+1$ such windows. The read is detectable
+--- in the sense that it contributes to species classification --- only if
+at least one of those windows is an exact match. The probability of this
+event is not simply $(L-w+1)(1-\mu)^{w}$, however, because adjacent windows
+overlap: window $i$ covers positions $i$ through $i+w-1$ and window $i+1$
+covers positions $i+1$ through $i+w$. They share $w-1$ positions. Whether
+window $i$ is a match and whether window $i+1$ is a match are therefore
+strongly positively correlated: if the shared $w-1$ positions all match (a
+likely event when $\mu$ is small), both windows succeed or fail together.
+This correlation makes a naive independence calculation wrong, and it is why
+a standard approximation used in the field --- the Poisson approximation ---
+substantially overestimates the informative-read probability once $\mu$ is
+moderate ($\mu\gtrsim 0.10$ for the parameters studied here). Section~2
+introduces the exact function $q(w,L,\mu)$ that handles this correlation
+correctly via a linear recurrence on the longest-run distribution of
+Bernoulli trials.
+
+\subsection{The Gap in the Existing Theory}
+
+The question of how much sequencing depth is needed to detect a given
+pathogen is not new, but it has only been addressed incompletely.
+
+Eidenschink Brodersen et al.~\cite{brodersen2020} derive a minimum
+sequencing depth formula using a Bernoulli probability model. Their result
+correctly captures the effect of abundance $p$ and genome length $N$: lower
+abundance and shorter genomes require deeper sequencing to guarantee
+detection. However, their model treats every read from the pathogen as
+equally informative regardless of how diverged the pathogen is from the
+reference. In their framework, the probability that a pathogen read is
+classifiable is always 1; divergence does not enter the calculation. This is
+a reasonable approximation for strains that are nearly identical to a
+reference entry, but it fails completely for the cases of greatest clinical
+interest: a novel variant, a cross-species spillover, or a pathogen with no
+close relative in the database.
+
+On the mathematical side, the statistics of $k$-mers under mutation have
+been studied~\cite{blanca2022,hera2023}, but with a different goal:
+estimating the mutation rate $\mu$ from an observed $k$-mer profile, not
+guaranteeing detection under a known or assumed $\mu$. The Lander--Waterman
+model~\cite{lander1988} addresses sequencing depth from a physical coverage
+standpoint: how many reads does it take to cover every position in a genome
+at least once? This answers a different question (assembly completeness vs.\
+classifier detection) and does not incorporate the $k$-mer matching step.
+Kraken2 and related tools come with extensive empirical benchmarks of
+detection sensitivity across organisms and sequencing
+depths~\cite{wood2019,lu2022}, but these are per-organism measurements, not
+closed-form formulas. No single formula exists that expresses minimum depth
+as a function of abundance, divergence, classifier window length, read
+length, and target error probability simultaneously.
+
+That is the gap this paper fills.
+
+\subsection{Contributions of This Work}
+
+The present paper makes the following contributions.
+\begin{enumerate}
+  \item \textbf{The informative-read probability $q(w,L,\mu)$.} The function
+  $q(w,L,\mu)$ is introduced as the probability that a single read of length
+  $L$ from a pathogen with per-base divergence $\mu$ contains at least one
+  $w$-mer exactly matching the reference. This is equivalent to the
+  probability that a sequence of $L$ Bernoulli$(1-\mu)$ trials contains at
+  least one run of $w$ consecutive successes, a classical combinatorial
+  problem whose solution via a linear recurrence of order $w$ is derived in
+  Definition~2.3. The Poisson approximation used in prior work is shown to
+  overestimate $q(w,L,\mu)$ by 72\% at $\mu=0.12$ alone, with the
+  overestimate exceeding 100\% as $\mu$ approaches $\mu_c$ from below ---
+  precisely the regime of greatest clinical relevance (Section~4.3).
+
+  \item \textbf{Theorem 1: Minimum sequencing depth.} The minimum number of
+  reads guaranteeing $\delta$-detection of a pathogen at abundance $p$ with
+  divergence $\mu$ under $w$-mer classification with read length $L$ is
+  proved to be:
+  \[
+    T^{*} = \left\lceil \frac{\ln(1/\delta)}{-\ln\bigl(1-p\cdot q(w,L,\mu)\bigr)}\right\rceil .
+  \]
+  The proof proceeds via a direct geometric probability argument
+  (Section~3.1). A Monotonicity Corollary establishes that $T^{*}$ is
+  strictly increasing in both $\mu$ and $w$, with immediate design
+  implications: more divergent pathogens and longer classifier windows both
+  require deeper sequencing.
+
+  \item \textbf{Theorem 2: Critical divergence $\mu_c$.} The critical
+  divergence $\mu_c$ --- the maximum divergence at which detection can be
+  guaranteed within a practical sequencing budget $T_{\max}$ --- is defined
+  and proved to be the unique solution to
+  $p\cdot q(w,L,\mu_c)=1-\delta^{1/T_{\max}}\;(\approx\ln(1/\delta)/T_{\max})$,
+  with uniqueness established via the Intermediate Value Theorem
+  (Section~3.2). This provides the first formal definition of the boundary
+  between classifiable and effectively novel pathogens. Notably, $\mu_c$
+  depends on all detection parameters, and increasing read length $L$ raises
+  it --- providing a formal basis for the practical preference for long-read
+  platforms in novel-pathogen detection.
+
+  \item \textbf{Theorem 3: Optimal classifier window $w^{*}$.} An inherent
+  sensitivity--specificity tradeoff governs the choice of $w$: smaller $w$
+  increases $q(w,L,\mu)$ (greater sensitivity to diverged pathogens) but
+  raises the probability of spurious matches from background DNA (reduced
+  specificity). The optimal $w$ minimizing $T^{*}$ subject to a
+  false-positive rate constraint $\alpha$ is proved to be:
+  \[
+    w^{*}=\left\lceil \log_4\!\left(\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\right)\right\rceil,
+  \]
+  and that the depth penalty for over-specifying $w$ beyond $w^{*}$ grows
+  rapidly with divergence (Section~3.3). For standard database and
+  specificity parameters, this yields $w^{*}=24$ --- the empirical value
+  used by SecureDNA and similar systems, here receiving its first
+  theoretical justification.
+
+  \item \textbf{Empirical validation on real genomes.} All three theorems
+  are validated by simulation on the SARS-CoV-2 Wuhan reference genome
+  (29,903 bp), Influenza A H3N2 HA segment (1,737 bp), and Influenza A H1N1
+  HA segment (1,752 bp), with biologically motivated divergence values
+  spanning Tier 1 through Tier 3. The maximum gap between theoretical
+  prediction and empirical detection rate is $0.033$ across the real-genome
+  scenarios (Section~4.5) and $0.062$ across all experiments
+  (Section~4.3).
+\end{enumerate}
+
+\subsection{Paper Organization}
+
+Section~2 establishes the formal model, including the exact definition of
+$q(w,L,\mu)$ and the linear recurrence used to compute it. Section~3 states
+and proves Theorems~1--3 and their corollaries. Section~4 describes the
+simulation methodology and presents the real-genome validation results.
+Section~5 discusses implications for clinical assay design, the failure
+regime of the Poisson approximation, and directions for future work.
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Model and Definitions}
+
+The following model formalises a clinical mNGS experiment. A patient sample
+contains genomic material from host and microbial sources. A pathogen of
+interest $P$ is present at relative abundance $p\in(0,1)$: a fraction $p$ of
+all sequenced reads originate from $P$. The pathogen genome has length $N$
+base pairs. The reference database $\mathcal{D}$ contains $Q$ sequences of
+average length $n_{\mathrm{avg}}$ base pairs; the nearest reference to $P$
+in $\mathcal{D}$ diverges from the true genome at per-base rate $\mu$ under
+an independent substitution model (i.e., each base independently disagrees
+with the reference with probability $\mu$).
 
 \begin{definition}[Divergence tier]\label{def:tier}
-Let $\mu\in[0,1]$ denote the per-base divergence between a target
-pathogen genome and its nearest reference in~$\db$.
+Let $\mu\in[0,1]$ denote the per-base divergence between a target pathogen
+genome and its nearest reference in $\mathcal{D}$.
 \begin{enumerate}
-  \item \textbf{Tier~1 (Known):}
-        $\mu=0$.  An exact reference exists in~$\db$.
-  \item \textbf{Tier~2 (Divergent--detectable):}
-        $0<\mu\le\muc$, where $\muc$ is the critical divergence
-        defined in Theorem~\ref{thm:mu_c}.
-        A reference-based $w$-mer classifier can still guarantee
-        $\delta$-detection within a practical sequencing
-        budget~$T_{\max}$.
-  \item \textbf{Tier~3 (Effectively novel):}
-        $\mu>\muc$.
-        No reference-based $w$-mer classifier guarantees detection
-        within budget~$T_{\max}$.
-        Detection requires reference-free methods (de~novo assembly,
-        anomaly detection); this regime is out of scope for the
-        present work.
+  \item \textbf{Tier 1 (Known):} $\mu=0$. An exact reference exists in
+  $\mathcal{D}$.
+  \item \textbf{Tier 2 (Divergent--detectable):} $0<\mu\le\mu_c$, where
+  $\mu_c$ is the critical divergence defined in Theorem~3.3. A
+  reference-based $w$-mer classifier can still guarantee $\delta$-detection
+  within a practical sequencing budget $T_{\max}$.
+  \item \textbf{Tier 3 (Effectively novel):} $\mu>\mu_c$. No
+  reference-based $w$-mer classifier guarantees detection within budget
+  $T_{\max}$. Detection requires reference-free methods (de novo assembly,
+  anomaly detection); this regime is out of scope for the present work.
 \end{enumerate}
 \end{definition}
 
-\begin{remark}
-$\muc$ is not a fixed biological constant: it depends on~$w$, $L$,
-$p$, $\delta$, and~$T_{\max}$.
-In particular, increasing read length~$L$ raises~$\muc$ for all
-other fixed parameters, providing a formal rationale for the
-practical preference for long-read platforms in novel-pathogen
-detection.
+\begin{remark}\label{rem:muc-dep}
+$\mu_c$ is not a fixed biological constant: it depends on $w$, $L$, $p$,
+$\delta$, and $T_{\max}$. In particular, increasing read length $L$ raises
+$\mu_c$ for all other fixed parameters, providing a formal rationale for the
+practical preference for long-read platforms in novel-pathogen detection.
 \end{remark}
 
 \begin{definition}[Informative read]\label{def:informative}
-Let all reads have fixed length~$L$ base pairs.
-A read~$r$ originating from pathogen~$\mathcal{P}$ with
-divergence~$\mu$ is \emph{informative} for a $w$-mer classifier if
-it contains at least one substring of length~$w$ that is an exact
-match to the corresponding window in the reference sequence.
-
-Under the independent-substitution model, each base of~$r$
-independently agrees with the reference with probability $1-\mu$.
-Define $P_n = P_n(w,\,1-\mu)$ as the probability that a sequence of
-$n$ independent Bernoulli$(1{-}\mu)$ trials contains \emph{no} run
-of $w$ consecutive successes.
-$P_n$ satisfies the linear recurrence
-\begin{equation}\label{eq:recurrence}
-  P_n \;=\;
-  \sum_{j=0}^{\min(n-1,\,w-1)} (1-\mu)^{j}\,\mu\;P_{n-j-1},
-  \qquad n \ge 1,
-\end{equation}
-with $P_0 = 1$.
-The exact informative probability is then
-\begin{equation}\label{eq:q_exact}
-  \qfn \;=\; 1 - P_L(w,\,1-\mu).
-\end{equation}
-The Poisson approximation---valid when
-$(L-w+1)(1-\mu)^w\ll 1$ and used hereafter for closed-form
-expressions---is
-\begin{equation}\label{eq:q_poisson}
-  \qfn \;\approx\;
-  1 - \exp\!\Bigl(-(L-w+1)(1-\mu)^{w}\Bigr).
-\end{equation}
+Let all reads have fixed length $L$ base pairs. A read $r$ originating from
+pathogen $P$ with divergence $\mu$ is \emph{informative} for a $w$-mer
+classifier if it contains at least one substring of length $w$ that is an
+exact match to the corresponding window in the reference sequence.
 \end{definition}
 
-\begin{remark}[Derivation of recurrence~\eqref{eq:recurrence}]
-Condition on the position of the first \emph{failure}
-(mismatch, probability~$\mu$) in the Bernoulli sequence.
-If the first failure occurs at position $j+1$ for
-$j\in\{0,\ldots,w-1\}$, the preceding $j$ bases are successes,
-no run of length~$w$ has yet been completed, and the problem
-reduces to the remaining $n-j-1$ trials.
-Summing over all such~$j$ yields~\eqref{eq:recurrence}.
-The recurrence has order~$w$ and can be evaluated in $O(wL)$
-time, making it computationally tractable for the parameter
-ranges of interest ($w\le 40$, $L\le 300$).
+Under the independent-substitution model, each base of $r$ independently
+agrees with the reference with probability $1-\mu$. Define
+$P_n=P_n(w,1-\mu)$ as the probability that a sequence of $n$ independent
+Bernoulli$(1-\mu)$ trials contains \emph{no} run of $w$ consecutive
+successes. $P_n$ satisfies the linear recurrence
+\begin{equation}\label{eq:recurrence}
+  P_n=\sum_{j=0}^{\min(n-1,\,w-1)}(1-\mu)^{j}\,\mu\,P_{n-j-1},\qquad n\ge 1,
+\end{equation}
+with $P_0=1$. The exact informative probability is then
+\begin{equation}\label{eq:qexact}
+  q(w,L,\mu)=1-P_L(w,1-\mu).
+\end{equation}
+The Poisson approximation --- which treats the $L-w+1$ windows as
+independent, and is used hereafter only for closed-form comparison
+(Section~5.2 shows that it is unreliable here) --- is
+\begin{equation}\label{eq:poisson}
+  q(w,L,\mu)\approx 1-\exp\!\bigl(-(L-w+1)(1-\mu)^{w}\bigr).
+\end{equation}
+
+\begin{remark}[Derivation of recurrence \eqref{eq:recurrence}]\label{rem:deriv}
+Condition on the position of the first failure (mismatch, probability
+$\mu$) in the Bernoulli sequence. If the first failure occurs at position
+$j+1$ for $j\in\{0,\dots,w-1\}$, the preceding $j$ bases are successes, no
+run of length $w$ has yet been completed, and the problem reduces to the
+remaining $n-j-1$ trials. Summing over all such $j$ yields
+\eqref{eq:recurrence}. The recurrence has order $w$ and can be evaluated in
+$O(wL)$ time, making it computationally tractable for the parameter ranges
+of interest ($w\le 40$, $L\le 300$).
 \end{remark}
 
 \begin{definition}[Detection event]\label{def:detection}
-Given a sequencing run of $T$ reads, let $\mathcal{E}$ denote the
-event that at least one informative pathogen read is produced.
-The false-negative event is $\overline{\mathcal{E}}$: no informative
-pathogen read appears.
-We say the classifier \emph{guarantees $\delta$-detection} if
-$\Pr(\overline{\mathcal{E}})\le\delta$.
+Given a sequencing run of $T$ reads, let $E$ denote the event that at least
+one informative pathogen read is produced. The false-negative event is
+$\overline{E}$: no informative pathogen read appears. The classifier is said
+to guarantee $\delta$-detection if $\Pr(\overline{E})\le\delta$.
 \end{definition}
 
-% ─────────────────────────────────────────────────────────────────────────────
+% ═════════════════════════════════════════════════════════════════════════════
 \section{Main Results}
-% ─────────────────────────────────────────────────────────────────────────────
 
 \subsection{Minimum Sequencing Depth}
 
 \begin{theorem}[Minimum sequencing depth]\label{thm:depth}
-Under the model of Definitions~\ref{def:tier}--\ref{def:detection},
-the minimum sequencing depth guaranteeing $\delta$-detection is
-\begin{equation}\label{eq:T_star}
-  \Tstar(p,\mu,w,L,\delta)
-  \;=\;
-  \left\lceil
-    \frac{\ln(1/\delta)}{-\ln\!\bigl(1-p\cdot\qfn\bigr)}
-  \right\rceil
-  \;\ge\;
-  \left\lceil
-    \frac{\ln(1/\delta)}{p\cdot\qfn}
-  \right\rceil,
+Under the model of Definitions~2.1--2.5, the minimum sequencing depth
+guaranteeing $\delta$-detection is
+\begin{equation}\label{eq:tstar}
+  T^{*}(p,\mu,w,L,\delta)=\left\lceil\frac{\ln(1/\delta)}{-\ln\bigl(1-p\cdot q(w,L,\mu)\bigr)}\right\rceil
+  \;\le\;\left\lceil\frac{\ln(1/\delta)}{p\cdot q(w,L,\mu)}\right\rceil,
 \end{equation}
-where the right-hand inequality is the small-$pq$ approximation,
-tight to within a factor of~$2$ whenever $p\cdot\qfn\le 0.5$.
+where the right-hand expression is the small-$pq$ approximation, an upper
+bound on $T^{*}$ that is tight to within a factor of 2 (up to rounding)
+whenever $p\cdot q(w,L,\mu)\le 0.5$.
 \end{theorem}
 
 \begin{proof}
-Each read is independently a pathogen read with probability~$p$,
-and each pathogen read is independently informative with
-probability $q=\qfn$ (Definition~\ref{def:informative}).
-Hence each read is an informative pathogen read with
-probability~$pq$, independently across reads.
-The false-negative event requires all $T$ reads to be
-non-informative pathogen reads:
+Each read is independently a pathogen read with probability $p$, and each
+pathogen read is independently informative with probability
+$q=q(w,L,\mu)$ (Definition~2.3). Hence each read is an informative pathogen
+read with probability $pq$, independently across reads. The false-negative
+event requires all $T$ reads to be non-informative pathogen reads:
 \[
-  \Pr(\overline{\mathcal{E}})
-  \;=\;
-  (1-pq)^{T}.
+  \Pr(\overline{E})=(1-pq)^{T}.
 \]
-Setting $\Pr(\overline{\mathcal{E}})\le\delta$ and solving:
+Setting $\Pr(\overline{E})\le\delta$ and solving:
 \[
-  (1-pq)^{T}\le\delta
-  \;\iff\;
-  T\ln(1-pq)\le\ln\delta
-  \;\iff\;
-  T\ge\frac{\ln(1/\delta)}{-\ln(1-pq)}.
+  (1-pq)^{T}\le\delta\iff T\ln(1-pq)\le\ln\delta\iff T\ge\frac{\ln(1/\delta)}{-\ln(1-pq)}.
 \]
-Taking the ceiling yields the exact minimum integer~$\Tstar$.
-The inequality $-\ln(1-x)\ge x$ for $x\in[0,1)$
-(with equality only at $x=0$) gives
-$-\ln(1-pq)\ge pq$, so
-$\ln(1/\delta)/pq\le\Tstar$, establishing the
-right-hand approximation.
-The factor-of-$2$ claim follows from
-$-\ln(1-x)\le 2x$ for $x\le 1/2$.
+Taking the ceiling yields the exact minimum integer $T^{*}$. Since
+$-\ln(1-x)\ge x$ for $x\in[0,1)$ (with equality only at $x=0$), we have
+$-\ln(1-pq)\ge pq$, hence $\ln(1/\delta)/(-\ln(1-pq))\le\ln(1/\delta)/(pq)$,
+which gives the right-hand bound in \eqref{eq:tstar}. For $x\le 1/2$,
+$-\ln(1-x)\le 2x$, so whenever $pq\le 1/2$ the right-hand expression exceeds
+the exact value by at most a factor of 2 (up to rounding).
 \end{proof}
 
-\begin{corollary}[Monotonicity]\label{cor:monotone}
-$\Tstar$ is strictly increasing in~$\mu$ and strictly increasing
-in~$w$, for all $\mu\in(0,1)$, $w\ge 1$, $L>w$.
+\begin{corollary}[Monotonicity]\label{cor:mono}
+$T^{*}$ is strictly increasing in $\mu$ and strictly increasing in $w$, for
+all $\mu\in(0,1)$, $w\ge1$, $L>w$.
 \end{corollary}
 
 \begin{proof}
-$\qfn=1-P_L(w,1-\mu)$ is strictly decreasing in~$\mu$:
-larger divergence makes each base more likely to mismatch,
-reducing the probability of any run of $w$ consecutive matches.
-Similarly, $\qfn$ is strictly decreasing in~$w$: a longer
-run is harder to achieve for any fixed $\mu>0$.
-Since $\Tstar$ is a strictly decreasing function of $q>0$,
-strict monotonicity in both $\mu$ and~$w$ follows.
+$q(w,L,\mu)=1-P_L(w,1-\mu)$ is strictly decreasing in $\mu$: larger
+divergence makes each base more likely to mismatch, reducing the probability
+of any run of $w$ consecutive matches. Similarly, $q(w,L,\mu)$ is strictly
+decreasing in $w$: a longer run is harder to achieve for any fixed $\mu>0$.
+Since $T^{*}$ is a strictly decreasing function of $q>0$, strict monotonicity
+in both $\mu$ and $w$ follows.
 \end{proof}
 
 \subsection{Critical Divergence}
 
-\begin{theorem}[Critical divergence~$\muc$]\label{thm:mu_c}
-Fix $w,L,p,\delta$ and a practical depth ceiling $T_{\max}$.
-Define
+\begin{theorem}[Critical divergence $\mu_c$]\label{thm:muc}
+Fix $w,L,p,\delta$ and an integer depth ceiling $T_{\max}$ with
+$p>1-\delta^{1/T_{\max}}$ (so that a perfectly matching pathogen is
+detectable within $T_{\max}$). Let
 \[
-  \muc(w,L,p,\delta,T_{\max})
-  \;=\;
-  \sup\bigl\{\mu\in[0,1]\;:\;\Tstar(p,\mu,w,L,\delta)\le T_{\max}\bigr\}.
+  \theta=\frac{1-\delta^{1/T_{\max}}}{p}\in(0,1),
 \]
-Under the approximation~\eqref{eq:q_poisson}, $\muc$ is the
-unique solution to
-\begin{equation}\label{eq:mu_c}
-  p\cdot\qfn\Big|_{\mu=\muc}
-  \;=\;
-  \frac{\ln(1/\delta)}{T_{\max}}.
+which agrees with $\ln(1/\delta)/(pT_{\max})$ to relative error
+$\ln(1/\delta)/(2T_{\max})$. Define
+$\mu_c=\sup\{\mu\in[0,1]:T^{*}(p,\mu,w,L,\delta)\le T_{\max}\}$. Then
+$\mu_c$ is the unique solution of
+\begin{equation}\label{eq:muc}
+  q(w,L,\mu_c)=\theta,
 \end{equation}
-For $\mu>\muc$, no reference-based $w$-mer classifier achieves
-$\delta$-detection within $T_{\max}$ reads
-(Tier~3, Definition~\ref{def:tier}).
+where $q$ is the exact informative-read probability of
+Eq.~\eqref{eq:qexact}, and $T^{*}\le T_{\max}$ if and only if $\mu\le\mu_c$.
+For $\mu>\mu_c$, no reference-based $w$-mer classifier achieves
+$\delta$-detection within $T_{\max}$ reads (Tier 3, Definition~2.1).
 \end{theorem}
 
 \begin{proof}
-By Theorem~\ref{thm:depth},
-$\Tstar\le T_{\max}$ iff
-$q(w,L,\mu)\ge\ln(1/\delta)/(pT_{\max})$.
-The function $q(w,L,\cdot)$ is continuous and strictly
-decreasing in~$\mu$ (Corollary~\ref{cor:monotone}), with
-$q(w,L,0)=1-e^{-(L-w+1)}>0$ and $q(w,L,1)=0$.
-By the intermediate value theorem there exists a unique
-$\muc$ satisfying~\eqref{eq:mu_c}.
-For $\mu>\muc$, $q<\ln(1/\delta)/(pT_{\max})$, so
-$\Tstar>T_{\max}$, establishing the Tier~3 boundary.
+Since $T_{\max}$ is an integer, $T^{*}\le T_{\max}$ iff
+$\ln(1/\delta)/(-\ln(1-pq))\le T_{\max}$ iff $1-pq\le\delta^{1/T_{\max}}$
+iff $q\ge\theta$. By Eq.~\eqref{eq:recurrence}, $q(w,L,\cdot)$ is a
+polynomial in $\mu$, hence continuous on $[0,1]$, with $q(w,L,0)=1>\theta$
+and $q(w,L,1)=0<\theta$. It is strictly decreasing on $(0,1)$ by
+Corollary~3.2, hence strictly decreasing on $[0,1]$ by continuity. The
+intermediate value theorem and strict monotonicity give a unique $\mu_c$
+with $q(w,L,\mu_c)=\theta$, and $q\ge\theta$ exactly when $\mu\le\mu_c$.
 \end{proof}
 
-\begin{remark}
-Equation~\eqref{eq:mu_c} can be solved numerically in $O(wL)$
-time per evaluation of~$q$ via the recurrence~\eqref{eq:recurrence},
-or in closed form using approximation~\eqref{eq:q_poisson}:
+\begin{remark}[Computing $\mu_c$]\label{rem:compmuc}
+Equation~\eqref{eq:muc} is solved by bisection, each evaluation of $q$
+costing $O(wL)$ via the recurrence \eqref{eq:recurrence}. Substituting the
+Poisson approximation \eqref{eq:poisson} gives the closed form
 \[
-  \muc
-  \;\approx\;
-  1
-  -
-  \left(
-    \frac{-\ln\!\bigl(1-\frac{\ln(1/\delta)}{pT_{\max}}\bigr)}
-         {L-w+1}
-  \right)^{\!\!1/w}.
+  \mu_c^{\mathrm{Pois}}=1-\left(\frac{-\ln(1-\theta)}{L-w+1}\right)^{1/w}.
 \]
+Because \eqref{eq:poisson} overestimates $q$ (Section~5.2),
+$\mu_c^{\mathrm{Pois}}$ overestimates $\mu_c$. For the parameters of
+Section~4 ($p=10^{-4}$, $w=24$, $L=150$, $\delta=0.01$, $T_{\max}=10^5$) the
+exact value is $\mu_c=0.1349$ while the closed form gives $0.199$, about $48\%$
+too high. All values of $\mu_c$ reported in this paper are exact. Using the
+closed form would misclassify $\mu=0.15$ and $\mu=0.18$ as Tier~2, although
+they require $130{,}987$ and $243{,}553$ reads (Table~1).
 \end{remark}
 
 \subsection{Optimal Classifier Window Length}
 
-\begin{theorem}[Optimal $w$-mer length~$\wstar$]\label{thm:optimal_w}
-Let $\alpha\in(0,1)$ be a target false-positive rate, where a false
-positive arises when a background (non-pathogen) read contains a
-$w$-mer matching the pathogen reference.
-Modeling database $w$-mer content as uniformly distributed over
-$4^w$ possible sequences, the false-positive probability for a
-single $w$-mer query is
-\begin{equation}\label{eq:fp}
-  P_{\mathrm{FP}}(w)
-  \;\approx\;
-  \frac{Q\cdot n_{\mathrm{avg}}}{4^{w}}.
+\begin{theorem}[Optimal $w$-mer length $w^{*}$]\label{thm:wstar}
+Let $\alpha\in(0,1)$ be a target false-positive rate, where a false positive
+arises when a background (non-pathogen) read contains a $w$-mer matching the
+pathogen reference. Modeling database $w$-mer content as uniformly
+distributed over $4^{w}$ possible sequences, the false-positive probability
+for a single $w$-mer query is
+\begin{equation}\label{eq:pfp}
+  P_{\mathrm{FP}}(w)\approx\frac{Q\cdot n_{\mathrm{avg}}}{4^{w}}.
 \end{equation}
-The optimal window length minimizing $\Tstar$ subject to
+The optimal window length minimizing $T^{*}$ subject to
 $P_{\mathrm{FP}}(w)\le\alpha$ is
-\begin{equation}\label{eq:w_star}
-  \wstar
-  \;=\;
-  \left\lceil
-    \log_4\!\left(\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\right)
-  \right\rceil.
+\begin{equation}\label{eq:wstar}
+  w^{*}=\left\lceil\log_4\!\left(\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\right)\right\rceil.
 \end{equation}
-For $\mu>0$, using any $w>\wstar$ increases required sequencing
-depth without improving false-positive performance, with the cost
-of over-specification diverging as $\mu\to\muc$.
+For $\mu>0$, using any $w>w^{*}$ strictly increases required sequencing depth
+without improving false-positive performance.
 \end{theorem}
 
 \begin{proof}
-By Corollary~\ref{cor:monotone}, $\Tstar(w)$ is strictly increasing
-in~$w$.
-Therefore the minimum of $\Tstar$ over the feasible set
-$\mathcal{W}=\{w\in\mathbb{Z}^+:P_{\mathrm{FP}}(w)\le\alpha\}$
-is attained at $w^{\dagger}=\min\mathcal{W}$.
-The constraint $P_{\mathrm{FP}}(w)\le\alpha$
-with~\eqref{eq:fp} becomes
+By Corollary~3.2, $T^{*}(w)$ is strictly increasing in $w$. Therefore the
+minimum of $T^{*}$ over the feasible set
+$\mathcal{W}=\{w\in\mathbb{Z}^{+}:P_{\mathrm{FP}}(w)\le\alpha\}$ is attained
+at $w^{\dagger}=\min\mathcal{W}$. The constraint $P_{\mathrm{FP}}(w)\le\alpha$
+with \eqref{eq:pfp} becomes
 \[
-  4^{w}\ge\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}
-  \;\iff\;
-  w\ge\log_4\!\left(\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\right),
+  4^{w}\ge\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\iff w\ge\log_4\!\left(\frac{Q\cdot n_{\mathrm{avg}}}{\alpha}\right),
 \]
-so $w^{\dagger}=\lceil\log_4(Q\cdot n_{\mathrm{avg}}/\alpha)\rceil=\wstar$.
+so $w^{\dagger}=\lceil\log_4(Q\cdot n_{\mathrm{avg}}/\alpha)\rceil=w^{*}$.
 
-The cost of over-specification: for $w=\wstar+\Delta$ with $\Delta\ge 1$,
-\[
-  \frac{\Tstar(\wstar+\Delta)}{\Tstar(\wstar)}
-  \;=\;
-  \frac{q(\wstar,L,\mu)}{q(\wstar+\Delta,L,\mu)}
-  \;\xrightarrow{\mu\to\muc}\;
-  \infty,
-\]
-since $q(\wstar,L,\muc)=\ln(1/\delta)/(pT_{\max})>0$ while
-$q(\wstar+\Delta,L,\muc)\to 0$ strictly faster
-(by strict monotonicity in~$w$).
+The cost of over-specification: for $w=w^{*}+\Delta$ with $\Delta\ge1$,
+strict monotonicity in $w$ gives $T^{*}(w^{*}+\Delta)>T^{*}(w^{*})$ for every
+$\mu>0$. When $pq\ll1$ the ratio is approximately
+$q(w^{*},L,\mu)/q(w^{*}+\Delta,L,\mu)$; for $w^{*}=24$, $\Delta=10$ this
+ratio is $2.3$ at $\mu=0.10$, $3.9$ at $\mu_c=0.1349$, and $9.7$ at
+$\mu=0.20$.
 \end{proof}
 
-\begin{remark}[Tradeoff sharpening under divergence]
-At $\mu=0$, $q(w,L,0)=1-e^{-(L-w+1)}\approx 1$ for all
-$w\ll L$, so $\Tstar$ is nearly independent of~$w$ and any
-$w\ge\wstar$ is acceptable.
-For $\mu>0$, $\Tstar$ grows strictly in~$w$ beyond~$\wstar$,
-and the penalty is largest precisely when the pathogen is most
-divergent---i.e., when correct window choice matters most.
-This is the central design implication: as genomic divergence
-increases, the penalty for over-specifying~$w$ grows, making
-the principled choice of $w=\wstar$ progressively more
-consequential.
+\begin{remark}[Tradeoff sharpening under divergence]\label{rem:tradeoff}
+At $\mu=0$, $q(w,L,0)=1$ for all $w\le L$, so $T^{*}$ is independent of $w$
+and any $w\ge w^{*}$ is acceptable. For $\mu>0$, $T^{*}$ grows strictly in
+$w$ beyond $w^{*}$, and the numerical penalty grows rapidly with $\mu$
+(Section~3.3 and Table~2). This is the central design implication: as
+genomic divergence increases, the penalty for over-specifying $w$ grows,
+making the principled choice of $w=w^{*}$ progressively more consequential.
 \end{remark}
 
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Numerical Calibration}
-% ─────────────────────────────────────────────────────────────────────────────
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Experiments}
 
-Table~\ref{tab:calibration} shows representative values of
-$\Tstar$ and $\wstar$ across biologically relevant parameter
-ranges, computed using the Poisson approximation~\eqref{eq:q_poisson}.
+\subsection{Simulation Methodology}
 
-\begin{table}[h!]
+All experiments are conducted using a Python simulator developed specifically
+to validate Theorems~1--3. The simulator implements the following pipeline
+for each parameter configuration $(p,\mu,w,L,T,n_{\text{trials}})$:
+\begin{enumerate}
+  \item \textbf{Pathogen genome generation.} For each independent trial, a
+  fresh diverged pathogen genome is generated by applying independent
+  substitution mutations at per-base rate $\mu$ to the reference sequence.
+  Each base is independently replaced by a uniformly random alternative base
+  with probability $\mu$, and left unchanged with probability $1-\mu$. Using
+  a fresh genome per trial ensures that the empirical detection rate
+  averages over the distribution of possible mutated sequences rather than
+  fixing one realization. All pathogen reads within a trial are drawn from
+  this one genome (see Section~5.4).
+
+  \item \textbf{Read sampling.} Each of the $T$ reads is drawn by: (a)
+  sampling a Bernoulli$(p)$ random variable to decide whether the read
+  originates from the pathogen or the background; (b) if it is a pathogen
+  read, sampling a uniformly random start position and extracting a
+  length-$L$ substring from the diverged pathogen genome.
+
+  \item \textbf{Informative-read test.} For each pathogen read, we slide a
+  window of length $w$ across all $L-w+1$ positions and check whether any
+  window in the read is an exact character-for-character match to the
+  corresponding window in the reference sequence at the same start position.
+  If at least one window matches, the read is declared informative and
+  detection is registered for that trial. The trial terminates early upon
+  the first informative read, matching the definition of $\delta$-detection.
+
+  \item \textbf{Detection rate computation.} The empirical detection rate
+  for a given parameter set is the fraction of $n_{\text{trials}}$
+  independent trials in which at least one informative read was observed.
+\end{enumerate}
+All experiments use $\delta=0.01$, $L=150$ bp, $w=24$, and $p=10^{-4}$; the
+number of trials is stated in each table caption. The depth ceiling is
+$T_{\max}=10^5$ reads throughout, which is also the experimental depth $T$;
+$\mu_c$ is evaluated at this $T_{\max}$ using the exact recurrence, giving
+$\mu_c=0.1349$. The simulator code and reference genomes are available at
+\url{https://github.com/DevanshMalhotra17/mNGS-depth-guarantees}.
+
+\subsection{Theoretical Values}
+
+For each parameter set, four quantities are derived from the theory:
+\begin{itemize}
+  \item $q_{\mathrm{exact}}$: the exact informative-read probability from the
+  linear recurrence (Eq.~\eqref{eq:recurrence}).
+  \item $q_{\mathrm{Poisson}}$: the Poisson approximation
+  (Eq.~\eqref{eq:poisson}), for comparison.
+  \item $T^{*}$: the minimum depth from Theorem~3.1.
+  \item $D_{\mathrm{theory}}$: the predicted detection probability at the
+  experimental depth $T$, computed as $1-(1-p\cdot q_{\mathrm{exact}})^{T}$.
+\end{itemize}
+
+\subsection{Experiment 1: Synthetic Genome $\mu$-Sweep}
+
+Using a synthetic 5,000 bp reference sequence drawn uniformly from
+$\{A,T,G,C\}$, I sweep divergence $\mu$ over nine values from 0 to 0.20
+($0$, $0.02$, $0.05$, $0.08$, $0.10$, $0.12$, $0.15$, $0.18$, $0.20$) and
+report theoretical and empirical detection rates at $T=100{,}000$ reads.
+
+\begin{table}[!ht]
 \centering
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{@{}ccccc|cc@{}}
+\small
+\begin{tabular}{rrrrrrr}
 \toprule
-$p$ & $\mu$ & $w$ & $L$ & $\delta$ & $\Tstar$ (approx.) & Notes\\
+$\mu$ & $q_{\mathrm{exact}}$ & $q_{\mathrm{Poisson}}$ & $T^{*}$ & $D_{\mathrm{theory}}$ & $D_{\mathrm{empirical}}$ & $|\Delta|$ \\
 \midrule
-$10^{-4}$ & $0.00$ & 24 & 150 & 0.01 & $\sim\!46{,}000$ & Tier~1 \\
-$10^{-4}$ & $0.05$ & 24 & 150 & 0.01 & $\sim\!60{,}000$ & Tier~2, mild divergence \\
-$10^{-4}$ & $0.15$ & 24 & 150 & 0.01 & $\sim\!200{,}000$ & Tier~2, high divergence \\
-$10^{-6}$ & $0.02$ & 24 & 150 & 0.01 & $\sim\!4.6\times 10^6$ & mNGS for rare pathogen \\
-$10^{-6}$ & $0.02$ & 30 & 150 & 0.01 & $\sim\!11\times 10^6$ & over-specified $w$ \\
+0.00 & 1.00000 & 1.00000 &  46,050 & 1.0000 & 1.0000 & 0.0000 \\
+0.02 & 0.99994 & 1.00000 &  46,053 & 1.0000 & 1.0000 & 0.0000 \\
+0.05 & 0.98598 & 1.00000 &  46,705 & 0.9999 & 1.0000 & 0.0001 \\
+0.08 & 0.88146 & 1.00000 &  52,243 & 0.9999 & 1.0000 & 0.0001 \\
+0.10 & 0.74376 & 0.99996 &  61,915 & 0.9994 & 1.0000 & 0.0006 \\
+0.12 & 0.57992 & 0.99728 &  79,409 & 0.9970 & 0.9967 & 0.0003 \\
+0.15 & 0.35157 & 0.92343 & 130,987 & 0.9703 & 0.9667 & 0.0036 \\
+0.18 & 0.18908 & 0.66202 & 243,553 & 0.8491 & 0.7967 & 0.0524 \\
+0.20 & 0.11875 & 0.45105 & 387,793 & 0.6950 & 0.6333 & 0.0617 \\
 \bottomrule
 \end{tabular}
-\caption{Representative depth bounds.
-$Q=5{,}000$, $n_{\mathrm{avg}}=15{,}000$~bp,
-$\alpha=10^{-6}$ giving $\wstar=24$.
-The last row illustrates the cost of choosing $w=30>\wstar$.}
-\label{tab:calibration}
+\caption{Synthetic-genome $\mu$-sweep at $T=100{,}000$ reads, $p=10^{-4}$,
+$w=24$, $L=150$, $\delta=0.01$, 300 trials per row, random seed 42
+(reproducible via \texttt{code/simulator.py}). $\mu_c=0.1349$ (at
+$T_{\max}=10^5$): rows at or below this threshold are Tier~2, rows above are
+Tier~3. $|\Delta|$ denotes the absolute difference between theoretical and
+empirical detection rates. The largest gaps ($0.052$ at $\mu=0.18$, $0.062$
+at $\mu=0.20$) occur where $D_{\mathrm{theory}}$ lies between $0.5$ and
+$0.9$, where binomial variance is largest, and are mostly explained by the
+shared-genome effect of Section~5.4 (expected gaps of $0.031$ and $0.041$ for
+a 5,000 bp genome); the residuals are within one standard error
+($\approx0.022$--$0.028$) of the 300-trial estimate. The Poisson
+approximation ($q_{\mathrm{Poisson}}$) deviates substantially from the exact
+value at moderate $\mu$: at $\mu=0.12$, the ratio
+$q_{\mathrm{Poisson}}/q_{\mathrm{exact}}\approx1.72$, a 72\% overestimate.}
 \end{table}
 
-For $Q=5{,}000$, $n_{\mathrm{avg}}=15{,}000$~bp,
-$\alpha=10^{-6}$:
-\[
-  \wstar
-  = \left\lceil\log_4\!\left(\frac{5000\times 15000}{10^{-6}}\right)\right\rceil
-  = \left\lceil\log_4(7.5\times 10^{13})\right\rceil
-  = \lceil 23.1 \rceil
-  = 24.
-\]
-At $L=150$, $w=24$, $\mu=0.02$:
-$\lambda=(150-24+1)\times 0.98^{24}=127\times 0.617\approx 78$,
-giving $q\approx 1-e^{-78}\approx 1.00$,
-confirming Tier~2 detection is not depth-limited by divergence at
-typical sequencing depths for this parameter regime.
+The most notable result in Table~1 is the divergence between
+$q_{\mathrm{exact}}$ and $q_{\mathrm{Poisson}}$ at moderate $\mu$. At
+$\mu=0.12$, the exact recurrence gives $q=0.580$ while the Poisson
+approximation gives $q\approx0.997$ --- a factor of 1.72. This discrepancy
+arises because overlapping windows are positively correlated: a single run
+of $m\ge w$ matching bases produces $m-w+1$ matching windows, so the
+expected window count $\lambda=(L-w+1)(1-\mu)^{w}$ overcounts independent
+chances by a factor of roughly $1/\mu$. The exact recurrence avoids this by
+conditioning on the position of the first mismatch.
 
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Limitations and Scope}
-% ─────────────────────────────────────────────────────────────────────────────
+\subsection{Experiment 2: Window-Length Sweep}
 
-The results above are derived under an idealized Level~1 model.
-Several real-world complications require extension in future work:
+Holding $\mu=0.10$ fixed --- closer to the critical divergence
+$\mu_c=0.1349$ established in Section~3.2, where the tradeoff-sharpening
+remark following Theorem~3.4 predicts the cost of over-specification is most
+severe --- $w$ is varied from $w^{*}=24$ upward in steps of 2, and the ratio
+$T^{*}(w)/T^{*}(w^{*})$ is computed from Theorem~3.1.
 
-\paragraph{Non-uniform coverage.}
-The model assumes each read position is drawn uniformly over the
-pathogen genome; GC bias and amplification artifacts violate this.
+Results confirm Theorem~3.4: $T^{*}(w)$ is strictly increasing in $w$ for
+$w\ge w^{*}$, with the ratio growing from $1.000$ at $w=24$ to $2.331$ at
+$w=34$ (Table~2). This demonstrates that
 
-\paragraph{Sequencing errors.}
-Error rate~$e$ can be incorporated by replacing~$\mu$ with
-$\mu_{\mathrm{eff}}=\mu+e-\mu e$ throughout, increasing $\Tstar$
-by at most a factor of $(1-e)^{-w}$ relative to the error-free case.
+\begin{table}[!ht]
+\centering
+\small
+\begin{tabular}{rrr}
+\toprule
+$w$ & $T^{*}(w)$ & Ratio $T^{*}(w)/T^{*}(w^{*})$ \\
+\midrule
+24 &  61,915 & 1.000 ($=w^{*}$) \\
+26 &  70,968 & 1.146 \\
+28 &  82,994 & 1.340 \\
+30 &  98,636 & 1.593 \\
+32 & 118,731 & 1.918 \\
+34 & 144,350 & 2.331 \\
+\bottomrule
+\end{tabular}
+\caption{Window-length sweep at $\mu=0.10$, $p=10^{-4}$, $L=150$,
+$\delta=0.01$. $T^{*}(w)$ is exactly increasing in $w$, confirming
+Theorem~3.4.}
+\end{table}
 
-\paragraph{Host depletion.}
-In practice, host reads are the majority of a clinical sample;
-$p$ here refers to the post-depletion abundance.
-The bound applies to the effective post-depletion~$p$.
+over-specifying the window by even 10 positions more than doubles the
+sequencing burden for a pathogen approaching the critical divergence
+boundary, and raises it $3.9$-fold at $\mu_c$ itself.
 
-\paragraph{Truly novel pathogens ($\mu>\muc$).}
-Theorem~\ref{thm:mu_c} formally marks this boundary.
-Reference-free detection methods---and their own sample-complexity
-theory---are required beyond it.
+\subsection{Real-Genome Validation}
+
+Theoretical bounds are evaluated on three real pathogen reference genomes
+retrieved from Nextstrain~\cite{nextstrain}: SARS-CoV-2 Wuhan reference
+(GenBank MN908947, 29,903 bp)~\cite{wu2020}; Influenza A H3N2 HA segment
+(CY163680.1, 1,737 bp); and Influenza A H1N1 HA segment (CY121680.1, 1,752
+bp). Biologically motivated divergence values are used: known inter-strain
+distances from the literature~\cite{viana2022,bedford2010}.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrc}
+\toprule
+Scenario & $N$ & $\mu$ & $q_{\mathrm{exact}}$ & $D_{\mathrm{theory}}$ & $D_{\mathrm{empirical}}$ & $|\Delta|$ & Tier \\
+\midrule
+SARS-CoV-2 Wuhan $\to$ Wuhan    & 29,903 & 0.0000 & 1.00000 & 1.000 & 1.000 & 0.000 & 1 \\
+SARS-CoV-2 Wuhan $\to$ Omicron  & 29,903 & 0.0017 & 1.00000 & 1.000 & 1.000 & 0.000 & 2 \\
+SARS-CoV-2 Wuhan $\to$ SARS-CoV-1 & 29,903 & 0.2000 & 0.11875 & 0.695 & 0.663 & 0.033 & 3 \\
+H3N2 HA: same season            & 1,737  & 0.0000 & 1.00000 & 1.000 & 1.000 & 0.000 & 1 \\
+H3N2 HA: 1-year drift           & 1,737  & 0.0100 & 1.00000 & 1.000 & 1.000 & 0.000 & 2 \\
+H3N2 HA: 5-year drift           & 1,737  & 0.0500 & 0.98598 & 1.000 & 1.000 & 0.000 & 2 \\
+H3N2 vs H1N1 HA (cross-subtype) & 1,752  & 0.3000 & 0.00742 & 0.072 & 0.075 & 0.004 & 3 \\
+\bottomrule
+\end{tabular}
+\caption{Real-genome validation at $T=100{,}000$ reads, $p=10^{-4}$, $w=24$,
+$L=150$, $\delta=0.01$, 400 trials per row, $\mu_c=0.1349$ (at
+$T_{\max}=10^5$). Divergence values for SARS-CoV-2 variants are sourced from
+\cite{wu2020,viana2022}; influenza inter-season drift estimates from
+\cite{bedford2010}. Maximum theory--empirical gap on the real genomes:
+$|\Delta|=0.033$; the largest gap in the paper is $0.062$ (Table~1,
+$\mu=0.20$).}
+\end{table}
+% VERIFY: "400 trials per row" is inferred from data/results_real_genomes.csv
+% (0.6625 = 265/400, 0.075 = 30/400); confirm against the run log.
+
+The results in Table~3 demonstrate that the theoretical bound is accurate
+across a range spanning two orders of magnitude in $\mu$ ($0.0017$ to $0.3$)
+and two distinct pathogen families. All Tier 2 scenarios achieve empirical
+detection rates at or above the theoretical prediction. The two Tier 3
+scenarios (SARS-CoV-2 to SARS-CoV-1; H3N2 to H1N1 cross-subtype) show
+detection rates well below unity at $T=100{,}000$, consistent with the bound
+prediction $D_{\mathrm{theory}}<1-\delta$; where empirical rates fall
+slightly below theory, this is the expected effect of drawing all reads in a
+trial from one mutated genome (Section~5.4).
+
+The SARS-CoV-2 to Omicron scenario is of particular interest: Omicron BA.1
+has approximately 50 substitution mutations relative to the Wuhan reference
+over 29,903 bp~\cite{viana2022}, giving $\mu\approx0.0017$. The model
+correctly predicts that this is comfortably within Tier 2 (detection
+guaranteed), consistent with the rapid clinical detection of Omicron via
+mNGS in late 2021. By contrast, a SARS-CoV-1-like pathogen
+($\mu\approx0.20$) sits firmly in Tier 3 relative to a SARS-CoV-2 reference
+database: the theorem correctly predicts partial detection failure at
+standard clinical sequencing depth.
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Discussion}
+
+\subsection{A Formula for Assay Design}
+
+The central result of this paper --- Equation~\eqref{eq:tstar} --- provides
+clinical laboratorians and computational biologists with a design tool that
+has not previously existed: a formula that translates assay design choices
+directly into a detection guarantee.
+
+Consider the practical use case. A hospital laboratory is validating an mNGS
+protocol for sepsis workup. The protocol uses Illumina short reads
+($L=150$ bp) and Kraken2 with $w=24$. The laboratory wants to guarantee
+detection of a mildly diverged Tier 2 pathogen ($\mu=0.02$, about an order of
+magnitude more divergent than the SARS-CoV-2 Omicron scenario in Table~3)
+present at abundance $p\ge10^{-6}$ (one pathogen molecule per million,
+corresponding to a very low pathogen load) with false-negative rate
+$\delta\le0.01$. Plugging into Equation~\eqref{eq:tstar}:
+$T^{*}\approx4.6\times10^{6}$ reads. Current short-read platforms routinely
+produce this output within a single sequencing run. Without this formula,
+the laboratory would have had to run empirical spike-in experiments across
+many pathogen strains to establish empirical sensitivity, with no guarantee
+that the tested strains covered the relevant divergence space.
+
+The phase diagram implied by Theorem~3.1 --- $T^{*}$ as a joint function of
+$p$ and $\mu$ at fixed $w$, $L$, $\delta$ --- provides an even more
+actionable tool. For a suspected pathogen with an estimated abundance range
+and a known or bounded divergence from the nearest reference, the laboratory
+can read off the minimum depth directly.
+
+\subsection{The Failure of the Poisson Approximation}
+
+The gap between $q_{\mathrm{exact}}$ and $q_{\mathrm{Poisson}}$ documented
+in Table~1 is not merely a mathematical curiosity; it has concrete
+consequences for sequencing depth estimation.
+
+At $\mu=0.12$, the Poisson approximation gives
+$q_{\mathrm{Poisson}}\approx0.997$, yielding $T^{*}\approx46{,}200$ reads ---
+nearly the same as for an exact reference match. The exact recurrence gives
+$q_{\mathrm{exact}}=0.580$, yielding $T^{*}\approx79{,}400$ reads --- 72\%
+more. A laboratory using the Poisson approximation to plan its sequencing
+depth would be under-sequencing by a factor of 1.72 for pathogens at this
+level of divergence. The problem worsens closer to the detection boundary:
+within Tier 2 itself, the overestimate ratio
+$q_{\mathrm{Poisson}}/q_{\mathrm{exact}}$ grows from 1.72 at $\mu=0.12$ to
+1.98 at $\mu=0.13$ and exceeds 2.1 by $\mu=0.134$, immediately below
+$\mu_c=0.1349$ --- meaning the approximation is least reliable exactly where
+the detection guarantee is most marginal and most consequential to get
+right.
+
+The overestimate is negligible at small divergence (ratio $1.00$ at
+$\mu\le0.05$) and grows with $\mu$: $1.34$ at $\mu=0.10$, $1.72$ at $0.12$,
+and $3.8$ at $0.20$. It does not require $\lambda$ to be large; at
+$\mu=0.30$, $\lambda\approx0.024$ yet the ratio is still $3.2$. The cause is
+clumping, as described in Section~4.3: the Poisson count treats every
+matching window as an independent chance, but windows occur in overlapping
+clusters whose mean size is roughly $1/\mu$. Counting clusters rather than
+windows, i.e.\ replacing $\lambda$ by $\lambda\mu$ (the standard
+Poisson-clumping heuristic for success runs), gives $q\approx0.113$ against
+an exact $0.119$ at $\mu=0.20$, and $0.00727$ against $0.00742$ at
+$\mu=0.30$. This heuristic is a rare-event approximation and is poor at
+small $\mu$ ($0.79$ versus $0.9999$ at $\mu=0.02$), so the exact recurrence
+remains the recommended tool across the full range.
+
+The consequences extend to $\mu_c$. Evaluated with the Poisson
+approximation, the critical divergence is $0.199$ rather than $0.1349$
+(Remark~3.1); a laboratory using it would treat a pathogen at $\mu=0.18$ as
+detectable at $10^5$ reads when the exact requirement is $243{,}553$.
+
+\subsection{The Read-Length Lever}
+
+A consequence of Theorem~3.3 that deserves emphasis is the role of read
+length $L$ in determining $\mu_c$. As $L$ increases (with $w$ and $\mu$
+fixed), the number of candidate windows per read ($L-w+1$) increases, raising
+$q$ and therefore lowering $T^{*}$ and raising $\mu_c$. This provides a
+formal quantitative justification for a well-known empirical preference:
+long-read sequencing platforms (Oxford Nanopore, PacBio) are systematically
+preferred for novel pathogen detection precisely because they provide more
+windows per read, making it more likely that at least one survives
+divergence. The advantage is particularly pronounced near the Tier 2/Tier 3
+boundary, where small improvements in $q$ translate to large reductions in
+required depth.
+
+\subsection{Limitations}
+
+\paragraph{Independent substitution model.} The analysis assumes that each
+base position mutates independently with probability $\mu$. Real pathogen
+evolution involves insertions, deletions, recombination, and
+context-dependent substitution rates. Insertions and deletions are
+particularly disruptive to $w$-mer matching because they shift the reading
+frame, breaking all downstream windows. A natural extension of this work
+would incorporate an insertion-deletion rate alongside the substitution
+rate, using a more general sequence evolution model (e.g., the Jukes--Cantor
+or Kimura models).
+
+\paragraph{Read independence.} Theorem~3.1 treats pathogen reads as
+independent, whereas in a single trial (and in a real sample) all pathogen
+reads derive from one mutated genome, so reads overlap and share mutations.
+Detection then depends on the fraction $f$ of read positions that are
+informative in that particular genome, and since $1-(1-pf)^{T}$ is concave in
+$f$, Jensen's inequality gives
+$\E\bigl[1-(1-pf)^{T}\bigr]\le1-(1-p\,\E[f])^{T}$, with $\E[f]=q$:
+expected empirical detection is at most the theoretical value, with a gap
+that shrinks as the genome length grows. Computing this expectation directly
+for $T=10^{5}$ gives $0.818$ at $\mu=0.18$ and $0.654$ at $\mu=0.20$ for a
+5,000 bp genome (theory: $0.849$ and $0.695$; Table~1 empirical: $0.797$ and
+$0.633$, each within about one standard error of the expectation), and
+$0.689$ at $\mu=0.20$ for a 29,903 bp genome (theory $0.695$; Table~3
+empirical $0.663$). The effect is therefore largest for short genomes and
+small for SARS-CoV-2-length genomes.
+
+\paragraph{Non-uniform genome coverage.} Reads are modeled as drawn uniformly
+from the pathogen genome. Real sequencing exhibits GC-dependent amplification
+bias and adapter-related coverage non-uniformities. In practice this means
+certain genomic regions are sequenced much more deeply than others, and the
+effective abundance $p$ for those regions differs from the global average.
+The bound $T^{*}$ is conservative in regions of high coverage and may be
+insufficient in regions of low coverage.
+
+\paragraph{Sequencing errors.} Sequencing machines produce errors ---
+incorrect base calls at a rate of approximately 0.1--1\% per base for
+short-read platforms. A sequencing error on a position that would otherwise
+have been a match converts it to a mismatch, effectively increasing the
+apparent divergence. This can be incorporated by replacing $\mu$ with an
+effective divergence $\mu_{\mathrm{eff}}=\mu+e(1-\mu)\approx\mu+e$, where
+$e$ is the per-base error rate. For Illumina platforms ($e\approx0.001$),
+this correction is negligible for $\mu\ge0.01$ but becomes non-trivial near
+$\mu=0$.
+
+\paragraph{Tier 3 scope.} The present work is confined to Tier 2: pathogens
+for which a reference-based approach can succeed. Tier 3 (effectively novel)
+pathogens require reference-free detection --- de novo assembly or anomaly
+detection in read embeddings --- and their sample-complexity theory is an
+open problem.
+
+\subsection{Future Directions}
+
+Several extensions follow naturally from the framework established here.
+
+\paragraph{Multi-pathogen panels.} Clinical mNGS workflows typically screen
+for many potential pathogens simultaneously. A depth guarantee for a panel of
+$D$ candidate pathogens requires a union bound over $D$ independent
+detection problems, each with its own $(p_i,\mu_i)$ pair, leading to a
+panel-wide depth requirement
+$T^{*}_{\mathrm{panel}}\approx\max_i T^{*}(p_i,\mu_i,w,L,\delta/D)$ by the
+Bonferroni correction. The optimal $w^{*}$ for a panel depends on the joint
+distribution of $(p_i,\mu_i)$ across pathogens and is an interesting
+combinatorial optimization problem.
+
+\paragraph{Level 2 model.} The Level 1 model presented here admits a natural
+Level 2 extension that incorporates the classifier's database structure:
+rather than treating any $w$-mer match as a detection event, one can weight
+matches by their LCA specificity (as in Kraken2's vote-weighted scheme) and
+derive an expected classification confidence score rather than a binary
+detection indicator. This would connect the depth bound to the classifier's
+taxonomic resolution rather than just its sensitivity.
+
+\paragraph{Optimal sequencing platform selection.} Given a cost model for
+sequencing depth as a function of platform (short-read vs.\ long-read) and a
+divergence distribution for the target pathogens, Theorem~3.3 provides a
+framework for choosing which platform minimizes cost subject to a detection
+guarantee. This is directly actionable for hospital laboratory procurement
+decisions.
+
+\section*{Data and Code Availability}
+
+All simulation code, reference genomes used in experiments, and processed
+results are publicly available at
+\begin{center}
+\url{https://github.com/DevanshMalhotra17/mNGS-depth-guarantees}
+\end{center}
+under the GNU Affero General Public License v3.0.
+
+\begin{thebibliography}{99}
+
+\bibitem{who2024} World Health Organization.
+Guidelines on the clinical management of sepsis. 2024. URL
+\url{https://www.who.int/news/item/30-01-2024-guidelines-on-the-clinical-management-of-sepsis}.
+Estimates: 48.9 million cases and 11 million deaths globally in 2017.
+
+\bibitem{kumar2006} Anand Kumar, Daniel Roberts, Kenneth E Wood, Bruce Light,
+Joseph E Parrillo, Satendra Sharma, Rhonda Suppes, Daniel Feinstein, Sergio
+Zanotti, Lee Taiberg, David Gurka, Aseem Kumar, and Matthew Cheang. Duration
+of hypotension before initiation of effective antimicrobial therapy is the
+critical determinant of survival in human septic shock. \emph{Critical Care
+Medicine}, 34(6):1589--1596, 2006. doi: 10.1097/01.CCM.0000217961.75225.E9.
+
+\bibitem{wilson2019} Michael R Wilson, Hannah A Sample, Kelsey C Zorn, Shaun
+Arevalo, Guixia Yu, John Neuhaus, Scot Federman, Doug Stryke, Benjamin
+Briggs, Charles Langelier, Anthony Berger, Victoria Douglas, S Andrew
+Josephson, Felicia C Chow, Bryce D Fulton, Joseph L DeRisi, and Jeffrey M
+Gelfand. Clinical metagenomic sequencing for diagnosis of meningitis and
+encephalitis. \emph{New England Journal of Medicine}, 380(24):2327--2340,
+2019. doi: 10.1056/NEJMoa1803396.
+
+\bibitem{wood2019} Derrick E Wood, Jennifer Lu, and Ben Langmead. Improved
+metagenomic analysis with Kraken 2. \emph{Genome Biology}, 20(1):257, 2019.
+doi: 10.1186/s13059-019-1891-0.
+
+\bibitem{brodersen2020} Lori Eidenschink Brodersen, Priya Jain, Amy S Gargis,
+Dhvani Batra, Justin Cha, Mili Sheth, Joseph D Lutgring, Alexis C Brown, J
+Kamile Rasheed, and Erica A Karlsson. A theoretical and generalized approach
+for the assessment of the sample-specific limit of detection for clinical
+metagenomics. \emph{Computational and Structural Biotechnology Journal},
+18:2002--2013, 2020. doi: 10.1016/j.csbj.2020.07.005.
+
+\bibitem{blanca2022} Antonio Blanca, Robert S Harris, David Koslicki, and Paul
+Medvedev. The statistics of k-mers from a sequence undergoing a simple
+mutation process without spurious matches. \emph{Journal of Computational
+Biology}, 29(2):146--163, 2022. doi: 10.1089/cmb.2021.0431.
+
+\bibitem{hera2023} Mahmudur Rahman Hera, N Tessa Pierce-Ward, and David
+Koslicki. Recovering the tree of life from k-mers. \emph{bioRxiv}, 2023. doi:
+10.1101/2023.12.01.569611.
+
+\bibitem{lander1988} Eric S Lander and Michael S Waterman. Genomic mapping by
+fingerprinting random clones: a mathematical analysis. \emph{Genomics},
+2(3):231--239, 1988. doi: 10.1016/0888-7543(88)90007-9.
+
+\bibitem{lu2022} Jennifer Lu, Natalia Rincon, Derrick E Wood, Florian P
+Breitwieser, Christopher Pockrandt, Ben Langmead, Steven L Salzberg, and
+Martin Steinegger. Metagenome analysis using the Kraken software suite.
+\emph{Nature Protocols}, 17(12):2815--2839, 2022. doi:
+10.1038/s41596-022-00738-y.
+
+\bibitem{nextstrain} Nextstrain. Seasonal influenza phylogenetics and
+reference sequences, 2024. URL
+\url{https://github.com/nextstrain/seasonal-flu}. H3N2 HA reference:
+CY163680.1 (A/Wisconsin/67/2005); H1N1 HA reference: CY121680.1
+(A/California/07/2009).
+
+\bibitem{wu2020} Fan Wu, Su Zhao, Bin Yu, Yan-Mei Chen, Wen Wang, Zhi-Gang
+Song, Yi Hu, Zhao-Wu Tao, Jun-Hua Tian, Yuan-Yuan Pei, Ming-Li Yuan, Yu-Ling
+Zhang, Fa-Hui Dai, Yi Liu, Qi-Min Wang, Jiao-Jiao Zheng, Lin Xu, Edward C
+Holmes, and Yong-Zhen Zhang. A new coronavirus associated with human
+respiratory disease in China. \emph{Nature}, 579(7798):265--269, 2020. doi:
+10.1038/s41586-020-2008-3.
+
+\bibitem{viana2022} Raquel Viana, Sikhulile Moyo, Daniel G Amoako, Houriiyah
+Tegally, Cathrine Scheepers, Christian L Althaus, Ugochukwu J Anyaneji,
+Phillip A Bester, Maciej F Boni, Mohammed Chand, et al. Rapid epidemic
+expansion of the SARS-CoV-2 Omicron variant in southern Africa.
+\emph{Nature}, 603(7902):679--686, 2022. doi: 10.1038/s41586-022-04411-y.
+
+\bibitem{bedford2010} Trevor Bedford, Sarah Cobey, Peter Beerli, and Mercedes
+Pascual. Global migration dynamics underlie evolution and persistence of
+human influenza A (H3N2). \emph{PLoS Pathogens}, 6(5):e1000918, 2010. doi:
+10.1371/journal.ppat.1000918.
+
+\end{thebibliography}
 
 \end{document}
